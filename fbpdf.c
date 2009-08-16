@@ -61,6 +61,8 @@ static void cleanup_page(void)
 
 static void showpage(int p)
 {
+	if (p < 0 || p >= poppler_document_get_n_pages(doc))
+		return;
 	cleanup_page();
 	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 		fb_cols() * MAXAREA, fb_rows() * MAXAREA);
@@ -68,8 +70,6 @@ static void showpage(int p)
 	cairo_scale(cairo, (float) zoom / 10, (float) zoom / 10);
 	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 	cairo_paint(cairo);
-	if (p < 0 || p >= poppler_document_get_n_pages(doc))
-		return;
 	num = p;
 	page = poppler_document_get_page(doc, p);
 	poppler_page_render(page, cairo);
