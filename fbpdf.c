@@ -145,7 +145,7 @@ static void mainloop()
 			showpage(num - getcount(1));
 			break;
 		case 'G':
-			showpage(getcount(0));
+			showpage(poppler_document_get_n_pages(doc));
 			break;
 		case 'z':
 			zoom = getcount(15);
