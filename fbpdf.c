@@ -74,7 +74,6 @@ static void showpage(int p)
 	page = poppler_document_get_page(doc, p);
 	poppler_page_render(page, cairo);
 	head = 0;
-	left = 0;
 	draw();
 }
 
