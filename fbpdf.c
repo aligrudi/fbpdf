@@ -80,7 +80,7 @@ static void showpage(int p)
 
 static int readkey(void)
 {
-	char b;
+	unsigned char b;
 	if (read(STDIN_FILENO, &b, 1) <= 0)
 		return -1;
 	return b;
