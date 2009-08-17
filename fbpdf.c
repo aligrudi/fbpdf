@@ -168,6 +168,10 @@ static void mainloop()
 
 int main(int argc, char* argv[])
 {
+	char *clear = "\x1b[2J\x1b[H";
+	char *msg = "\t\t\t\t---FBPDF---\n";
+	char *hide = "\x1b[?25l";
+	char *show = "\x1b[?25h";
 	if (argc < 2) {
 		printf("usage: fbpdf filename\n");
 		return 1;
@@ -177,11 +181,15 @@ int main(int argc, char* argv[])
 		printf("cannot open file\n");
 		return 1;
 	}
+	write(STDIN_FILENO, clear, strlen(clear));
+	write(STDIN_FILENO, msg, strlen(msg));
+	write(STDIN_FILENO, hide, strlen(hide));
 	fb_init();
 	mainloop();
 	cleanup_page();
 	fb_free();
 	if (doc)
 		g_object_unref(G_OBJECT(doc));
+	write(STDIN_FILENO, show, strlen(show));
 	return 0;
 }
