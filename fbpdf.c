@@ -18,6 +18,7 @@ static PopplerPage *page;
 static int num;
 static cairo_t *cairo;
 static cairo_surface_t *surface;
+static char filename[PATH_MAX];
 static int zoom = 15;
 static int head;
 static int left;
@@ -40,7 +41,7 @@ static void draw()
 	}
 }
 
-static int load_document(char *filename)
+static int load_document(void)
 {
 	char abspath[PATH_MAX];
 	char uri[PATH_MAX + 16];
@@ -93,12 +94,24 @@ static int getcount(int def)
 	return result;
 }
 
+static void printinfo(void)
+{
+	char *clear = "\x1b[2J\x1b[H";
+	write(STDIN_FILENO, clear, strlen(clear));
+	printf("\t\t\t\t---FBPDF---\r\n\n\n");
+	printf("filename:\t%s\r\n", filename);
+	printf("pages:\t\t%d\r\n", poppler_document_get_n_pages(doc));
+	if (page) {
+		printf("current:\t%d\r\n", num + 1);
+		printf("zoom:\t\t%d%%\r\n", zoom * 10);
+	}
+}
+
 static void mainloop()
 {
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
 	struct termios oldtermios, termios;
-	int maxhead, maxleft;
 	int c;
 	tcgetattr(STDIN_FILENO, &termios);
 	oldtermios = termios;
@@ -106,8 +119,37 @@ static void mainloop()
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &termios);
 	showpage(0);
 	while ((c = readkey()) != -1) {
-		maxhead = cairo_image_surface_get_height(surface) - fb_rows();
-		maxleft = cairo_image_surface_get_width(surface) - fb_cols();
+		int maxhead = cairo_image_surface_get_height(surface) - fb_rows();
+		int maxleft = cairo_image_surface_get_width(surface) - fb_cols();
+		switch (c) {
+		case CTRLKEY('f'):
+		case 'J':
+			showpage(num + getcount(1));
+			break;
+		case CTRLKEY('b'):
+		case 'K':
+			showpage(num - getcount(1));
+			break;
+		case 'G':
+			showpage(getcount(poppler_document_get_n_pages(doc)) - 1);
+			break;
+		case 'z':
+			zoom = getcount(15);
+			showpage(num);
+			break;
+		case 'i':
+			printinfo();
+			break;
+		case 'q':
+			tcsetattr(STDIN_FILENO, 0, &oldtermios);
+			return;
+		case 27:
+			count = 0;
+			break;
+		default:
+			if (isdigit(c))
+				count = count * 10 + c - '0';
+		}
 		switch (c) {
 		case 'j':
 			head += step * getcount(1);
@@ -136,30 +178,9 @@ static void mainloop()
 		case '\b':
 			head -= fb_rows() * getcount(1) - step;
 			break;
-		case CTRLKEY('f'):
-		case 'J':
-			showpage(num + getcount(1));
-			break;
-		case CTRLKEY('b'):
-		case 'K':
-			showpage(num - getcount(1));
-			break;
-		case 'G':
-			showpage(getcount(poppler_document_get_n_pages(doc)) - 1);
-			break;
-		case 'z':
-			zoom = getcount(15);
-			showpage(num);
-			break;
-		case 'q':
-			tcsetattr(STDIN_FILENO, 0, &oldtermios);
-			return;
-		case 27:
-			count = 0;
-			break;
 		default:
-			if (isdigit(c))
-				count = count * 10 + c - '0';
+			/* no need to redraw */
+			continue;
 		}
 		head = MAX(0, MIN(maxhead, head));
 		left = MAX(0, MIN(maxleft, left));
@@ -169,8 +190,6 @@ static void mainloop()
 
 int main(int argc, char* argv[])
 {
-	char *clear = "\x1b[2J\x1b[H";
-	char *msg = "\t\t\t\t---FBPDF---\n";
 	char *hide = "\x1b[?25l";
 	char *show = "\x1b[?25h";
 	if (argc < 2) {
@@ -178,13 +197,13 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	g_type_init();
-	if (load_document(argv[1])) {
+	strcpy(filename, argv[1]);
+	if (load_document()) {
 		printf("cannot open file\n");
 		return 1;
 	}
-	write(STDIN_FILENO, clear, strlen(clear));
-	write(STDIN_FILENO, msg, strlen(msg));
 	write(STDIN_FILENO, hide, strlen(hide));
+	printinfo();
 	fb_init();
 	mainloop();
 	cleanup_page();
