@@ -173,6 +173,8 @@ static void mainloop()
 		case '\b':
 			head -= fb_rows() * getcount(1) - step;
 			break;
+		case CTRLKEY('l'):
+			break;
 		default:
 			/* no need to redraw */
 			continue;
