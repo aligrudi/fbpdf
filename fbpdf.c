@@ -106,7 +106,7 @@ static void mainloop()
 	showpage(0);
 	while ((c = readkey()) != -1) {
 		maxhead = cairo_image_surface_get_height(surface) - fb_rows();
-		maxleft = cairo_image_surface_get_height(surface) - fb_cols();
+		maxleft = cairo_image_surface_get_width(surface) - fb_cols();
 		switch (c) {
 		case 'j':
 			head += step * getcount(1);
