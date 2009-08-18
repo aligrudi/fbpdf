@@ -96,15 +96,10 @@ static int getcount(int def)
 
 static void printinfo(void)
 {
-	char *clear = "\x1b[2J\x1b[H";
-	write(STDIN_FILENO, clear, strlen(clear));
-	printf("\t\t\t\t---FBPDF---\r\n\n\n");
-	printf("filename:\t%s\r\n", filename);
-	printf("pages:\t\t%d\r\n", poppler_document_get_n_pages(doc));
-	if (page) {
-		printf("current:\t%d\r\n", num + 1);
-		printf("zoom:\t\t%d%%\r\n", zoom * 10);
-	}
+	printf("\x1b[H");
+	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K",
+		filename, num + 1, poppler_document_get_n_pages(doc), zoom * 10);
+	fflush(stdout);
 }
 
 static void mainloop()
@@ -192,6 +187,7 @@ int main(int argc, char* argv[])
 {
 	char *hide = "\x1b[?25l";
 	char *show = "\x1b[?25h";
+	char *clear = "\x1b[2J";
 	if (argc < 2) {
 		printf("usage: fbpdf filename\n");
 		return 1;
@@ -203,6 +199,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	write(STDIN_FILENO, hide, strlen(hide));
+	write(STDOUT_FILENO, clear, strlen(clear));
 	printinfo();
 	fb_init();
 	mainloop();
@@ -211,5 +208,6 @@ int main(int argc, char* argv[])
 	if (doc)
 		g_object_unref(G_OBJECT(doc));
 	write(STDIN_FILENO, show, strlen(show));
+	printf("\n");
 	return 0;
 }
