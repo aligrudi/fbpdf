@@ -1,7 +1,7 @@
 CC = cc
 CFLAGS = -std=gnu89 -pedantic -Wall -O2 \
-	`pkg-config --cflags cairo poppler-glib`
-LDFLAGS = `pkg-config --libs cairo poppler-glib`
+	`pkg-config --cflags poppler-glib`
+LDFLAGS = `pkg-config --libs poppler-glib`
 
 all: fbpdf
 .c.o:
