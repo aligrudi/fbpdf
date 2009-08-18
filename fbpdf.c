@@ -10,7 +10,8 @@
 
 #define PAGESTEPS		8
 #define CTRLKEY(x)		((x) - 96)
-#define MAXAREA			2
+#define MAXWIDTH		2
+#define MAXHEIGHT		3
 
 static PopplerDocument *doc;
 static PopplerPage *page;
@@ -65,7 +66,7 @@ static void showpage(int p)
 		return;
 	cleanup_page();
 	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-		fb_cols() * MAXAREA, fb_rows() * MAXAREA);
+		fb_cols() * MAXWIDTH, fb_rows() * MAXHEIGHT);
 	cairo = cairo_create(surface);
 	cairo_scale(cairo, (float) zoom / 10, (float) zoom / 10);
 	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
