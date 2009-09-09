@@ -9,21 +9,16 @@
 #include "draw.h"
 
 #define FBDEV_PATH	"/dev/fb0"
-#define MAXWIDTH	(1 << 12)
+#define MAXFBWIDTH	(1 << 12)
 #define BPP		sizeof(fbval_t)
 #define NLEVELS		(1 << 8)
-#define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
-
-static void xerror(char *msg)
-{
-	perror(msg);
-	exit(1);
-}
 
 static int fd;
 static unsigned char *fb;
 static struct fb_var_screeninfo vinfo;
 static struct fb_fix_screeninfo finfo;
+static int rl, rr, gl, gr, bl, br;
+static int nr, ng, nb;
 
 static int fb_len()
 {
@@ -34,43 +29,34 @@ static void fb_cmap_save(int save)
 {
 	static unsigned short red[NLEVELS], green[NLEVELS], blue[NLEVELS];
 	struct fb_cmap cmap;
-	int mr = 1 << vinfo.red.length;
-	int mg = 1 << vinfo.green.length;
-	int mb = 1 << vinfo.blue.length;
 	if (finfo.visual == FB_VISUAL_TRUECOLOR)
 		return;
 	cmap.start = 0;
-	cmap.len = MAX(mr, MAX(mg, mb));
+	cmap.len = MAX(nr, MAX(ng, nb));
 	cmap.red = red;
 	cmap.green = green;
 	cmap.blue = blue;
 	cmap.transp = 0;
-	if (save)
-		ioctl(fd, FBIOGETCMAP, &cmap);
-	else
-		ioctl(fd, FBIOPUTCMAP, &cmap);
+	ioctl(fd, save ? FBIOGETCMAP : FBIOPUTCMAP, &cmap);
 }
 
 void fb_cmap(void)
 {
 	unsigned short red[NLEVELS], green[NLEVELS], blue[NLEVELS];
 	struct fb_cmap cmap;
-	int mr = 1 << vinfo.red.length;
-	int mg = 1 << vinfo.green.length;
-	int mb = 1 << vinfo.blue.length;
 	int i;
 	if (finfo.visual == FB_VISUAL_TRUECOLOR)
 		return;
 
-	for (i = 0; i < mr; i++)
-		red[i] = (65535 / (mr - 1)) * i;
-	for (i = 0; i < mg; i++)
-		green[i] = (65535 / (mg - 1)) * i;
-	for (i = 0; i < mb; i++)
-		blue[i] = (65535 / (mb - 1)) * i;
+	for (i = 0; i < nr; i++)
+		red[i] = (65535 / (nr - 1)) * i;
+	for (i = 0; i < ng; i++)
+		green[i] = (65535 / (ng - 1)) * i;
+	for (i = 0; i < nb; i++)
+		blue[i] = (65535 / (nb - 1)) * i;
 
 	cmap.start = 0;
-	cmap.len = MAX(mr, MAX(mg, mb));
+	cmap.len = MAX(nr, MAX(ng, nb));
 	cmap.red = red;
 	cmap.green = green;
 	cmap.blue = blue;
@@ -79,10 +65,29 @@ void fb_cmap(void)
 	ioctl(fd, FBIOPUTCMAP, &cmap);
 }
 
+static void xerror(char *msg)
+{
+	perror(msg);
+	exit(1);
+}
+
 static void xdie(char *msg)
 {
 	fprintf(stderr, "%s\n", msg);
 	exit(1);
+}
+
+static void init_colors(void)
+{
+	nr = 1 << vinfo.red.length;
+	ng = 1 << vinfo.green.length;
+	nb = 1 << vinfo.blue.length;
+	rr = 8 - vinfo.red.length;
+	rl = vinfo.red.offset;
+	gr = 8 - vinfo.green.length;
+	gl = vinfo.green.offset;
+	br = 8 - vinfo.blue.length;
+	bl = vinfo.blue.offset;
 }
 
 void fb_init(void)
@@ -96,6 +101,7 @@ void fb_init(void)
 		xerror("ioctl failed");
 	if ((vinfo.bits_per_pixel + 7) >> 3 != BPP)
 		xdie("fbval_t does not match framebuffer depth");
+	init_colors();
 	fb = mmap(NULL, fb_len(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (fb == MAP_FAILED)
 		xerror("can't map the framebuffer");
@@ -117,17 +123,9 @@ void fb_free()
 	close(fd);
 }
 
-static fbval_t color_bits(struct fb_bitfield *bf, fbval_t v)
-{
-	fbval_t moved = v >> (8 - bf->length);
-	return moved << bf->offset;
-}
-
 fbval_t fb_color(unsigned char r, unsigned char g, unsigned char b)
 {
-	return color_bits(&vinfo.red, r) |
-		color_bits(&vinfo.green, g) |
-		color_bits(&vinfo.blue, b);
+	return ((r >> rr) << rl) | ((g >> gr) << gl) | ((b >> br) << bl);
 }
 
 int fb_rows(void)
@@ -145,12 +143,12 @@ static unsigned char *rowaddr(int r)
 	return fb + (r + vinfo.yoffset) * finfo.line_length;
 }
 
-static unsigned long cache[MAXWIDTH];
+static unsigned long cache[MAXFBWIDTH];
 void fb_box(int sr, int sc, int er, int ec, fbval_t val)
 {
 	int i;
 	int pc = sizeof(cache[0]) / sizeof(val);
-	int cn = MIN((ec - sc) / pc + 1, ARRAY_SIZE(cache));
+	int cn = MIN((ec - sc) / pc + 1, MAXFBWIDTH);
 	unsigned long nv = val;
 	for (i = 1; i < pc; i++)
 		nv = (nv << (sizeof(val) * 8)) | val;
