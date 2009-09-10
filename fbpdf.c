@@ -210,16 +210,21 @@ int main(int argc, char* argv[])
 		printf("cannot open file\n");
 		return 1;
 	}
-	write(STDIN_FILENO, hide, strlen(hide));
-	write(STDOUT_FILENO, clear, strlen(clear));
-	printinfo();
-	fb_init();
-	mainloop();
-	cleanup_page();
-	fb_free();
+	if (poppler_document_get_n_pages(doc)) {
+		write(STDIN_FILENO, hide, strlen(hide));
+		write(STDOUT_FILENO, clear, strlen(clear));
+		printinfo();
+		fb_init();
+		mainloop();
+		cleanup_page();
+		fb_free();
+		write(STDIN_FILENO, show, strlen(show));
+		printf("\n");
+	} else {
+		printf("zero pages!\n");
+		return 1;
+	}
 	if (doc)
 		g_object_unref(G_OBJECT(doc));
-	write(STDIN_FILENO, show, strlen(show));
-	printf("\n");
 	return 0;
 }
