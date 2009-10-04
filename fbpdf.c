@@ -178,9 +178,11 @@ static void mainloop()
 			head = maxhead / 2;
 			break;
 		case ' ':
+		case CTRL('d'):
 			head += fb_rows() * getcount(1) - step;
 			break;
-		case '\b':
+		case 127:
+		case CTRL('u'):
 			head -= fb_rows() * getcount(1) - step;
 			break;
 		case CTRLKEY('l'):
