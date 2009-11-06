@@ -9,6 +9,7 @@
  *
  */
 #include <ctype.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +29,7 @@ static PopplerPage *page;
 static int num;
 static cairo_t *cairo;
 static cairo_surface_t *surface;
+static struct termios termios;
 static char filename[PATH_MAX];
 static int zoom = 15;
 static int head;
@@ -112,16 +114,33 @@ static void printinfo(void)
 	fflush(stdout);
 }
 
+static void term_setup(void)
+{
+	struct termios newtermios;
+	tcgetattr(STDIN_FILENO, &termios);
+	newtermios = termios;
+	newtermios.c_lflag &= ~ICANON;
+	newtermios.c_lflag &= ~ECHO;
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &newtermios);
+}
+
+static void term_cleanup(void)
+{
+	tcsetattr(STDIN_FILENO, 0, &termios);
+}
+
+static void sigcont(int sig)
+{
+	term_setup();
+}
+
 static void mainloop()
 {
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
-	struct termios oldtermios, termios;
 	int c;
-	tcgetattr(STDIN_FILENO, &termios);
-	oldtermios = termios;
-	cfmakeraw(&termios);
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &termios);
+	term_setup();
+	signal(SIGCONT, sigcont);
 	showpage(0);
 	while ((c = readkey()) != -1) {
 		int maxhead = cairo_image_surface_get_height(surface) - fb_rows();
@@ -146,7 +165,7 @@ static void mainloop()
 			printinfo();
 			break;
 		case 'q':
-			tcsetattr(STDIN_FILENO, 0, &oldtermios);
+			term_cleanup();
 			return;
 		case 27:
 			count = 0;
