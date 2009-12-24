@@ -47,7 +47,7 @@ static void draw()
 	for (i = head; i < h + head; i++) {
 		for (j = left; j < w + left; j++) {
 			unsigned char *p = img + (i * cols + j) * 4;
-			slice[j - left] = fb_color(*p, *(p + 1), *(p + 2));
+			slice[j - left] = fb_color(*(p + 2), *(p + 1), *p);
 		}
 		fb_set(i - head, 0, slice, w);
 	}
