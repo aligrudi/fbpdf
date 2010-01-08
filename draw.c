@@ -20,9 +20,9 @@ static struct fb_fix_screeninfo finfo;
 static int rl, rr, gl, gr, bl, br;
 static int nr, ng, nb;
 
-static int fb_len()
+static int fb_len(void)
 {
-	return vinfo.xres_virtual * vinfo.yres_virtual * BPP;
+	return finfo.line_length * vinfo.yres_virtual;
 }
 
 static void fb_cmap_save(int save)
@@ -101,6 +101,7 @@ void fb_init(void)
 		xerror("ioctl failed");
 	if ((vinfo.bits_per_pixel + 7) >> 3 != BPP)
 		xdie("fbval_t does not match framebuffer depth");
+	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
 	init_colors();
 	fb = mmap(NULL, fb_len(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (fb == MAP_FAILED)
@@ -116,7 +117,7 @@ void fb_set(int r, int c, fbval_t *mem, int len)
 	memcpy(fb + loc, mem, len * BPP);
 }
 
-void fb_free()
+void fb_free(void)
 {
 	fb_cmap_save(0);
 	munmap(fb, fb_len());
