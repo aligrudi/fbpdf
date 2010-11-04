@@ -1,12 +1,11 @@
 /*
- * fbpdf - A small framebuffer pdf viewer using poppler
+ * fbpdf - a small framebuffer pdf viewer using mupdf
  *
- * Copyright (C) 2009 Ali Gholami Rudi
+ * Copyright (C) 2009-2010 Ali Gholami Rudi
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License, as published by the
  * Free Software Foundation.
- *
  */
 #include <ctype.h>
 #include <signal.h>
@@ -15,80 +14,90 @@
 #include <string.h>
 #include <unistd.h>
 #include <pty.h>
-#include <cairo/cairo.h>
-#include <glib/poppler.h>
+#include "fitz.h"
+#include "mupdf.h"
 #include "draw.h"
 
 #define PAGESTEPS		8
 #define CTRLKEY(x)		((x) - 96)
 #define MAXWIDTH		2
 #define MAXHEIGHT		3
+#define PDFCOLS			(1 << 11)
+#define PDFROWS			(1 << 12)
 
-static PopplerDocument *doc;
-static PopplerPage *page;
-static int num;
-static cairo_t *cairo;
-static cairo_surface_t *surface;
+static fbval_t pbuf[PDFROWS * PDFCOLS];
+
+static int num = 1;
 static struct termios termios;
-static char filename[PATH_MAX];
+static char filename[256];
 static int zoom = 15;
 static int head;
 static int left;
 static int count;
 
-static void draw()
+static fz_glyphcache *glyphcache;
+static pdf_xref *xref;
+static int pagecount;
+
+static void draw(void)
 {
-	unsigned char *img = cairo_image_surface_get_data(surface);
-	fbval_t slice[1 << 14];
-	int i, j;
-	int h = MIN(fb_rows(), cairo_image_surface_get_height(surface));
-	int w = MIN(fb_cols(), cairo_image_surface_get_width(surface));
-	int cols = cairo_image_surface_get_width(surface);
-	for (i = head; i < h + head; i++) {
-		for (j = left; j < w + left; j++) {
-			unsigned char *p = img + (i * cols + j) * 4;
-			slice[j - left] = fb_color(*(p + 2), *(p + 1), *p);
+	int i;
+	for (i = head; i < MIN(head + fb_rows(), PDFROWS); i++)
+		fb_set(i - head, 0, pbuf + i * PDFCOLS + left, fb_cols());
+}
+
+static int showpage(int p)
+{
+	fz_matrix ctm;
+	fz_bbox bbox;
+	fz_pixmap *pix;
+	fz_device *dev;
+	fz_obj *pageobj;
+	fz_displaylist *list;
+	pdf_page *page;
+	int x, y, w, h;
+	if (p < 1 || p > pagecount)
+		return 0;
+
+	memset(pbuf, 0x00, sizeof(pbuf));
+
+	pageobj = pdf_getpageobject(xref, p);
+	if (pdf_loadpage(&page, xref, pageobj))
+		return 1;
+	list = fz_newdisplaylist();
+	dev = fz_newlistdevice(list);
+	if (pdf_runpage(xref, page, dev, fz_identity))
+		return 1;
+	fz_freedevice(dev);
+
+	ctm = fz_translate(0, -page->mediabox.y1);
+	ctm = fz_concat(ctm, fz_scale((float) zoom / 10, (float) -zoom / 10));
+	bbox = fz_roundrect(fz_transformrect(ctm, page->mediabox));
+	w = bbox.x1 - bbox.x0;
+	h = bbox.y1 - bbox.y0;
+
+	pix = fz_newpixmapwithrect(fz_devicergb, bbox);
+	fz_clearpixmap(pix, 0xff);
+
+	dev = fz_newdrawdevice(glyphcache, pix);
+	fz_executedisplaylist(list, dev, ctm);
+	fz_freedevice(dev);
+
+	for (y = 0; y < MIN(pix->h, PDFROWS); y++) {
+		for (x = 0; x < MIN(pix->w, PDFCOLS); x++) {
+			unsigned char *s = pix->samples + y * pix->w * 4 + x * 4;
+			pbuf[y * PDFCOLS + x] = fb_color(s[0], s[1], s[2]);
+
 		}
-		fb_set(i - head, 0, slice, w);
 	}
-}
-
-static int load_document(void)
-{
-	char abspath[PATH_MAX];
-	char uri[PATH_MAX + 16];
-	realpath(filename, abspath);
-	snprintf(uri, sizeof(uri), "file://%s", abspath);
-	doc = poppler_document_new_from_file(uri, NULL, NULL);
-	return !doc;
-}
-
-static void cleanup_page(void)
-{
-	if (cairo)
-		cairo_destroy(cairo);
-	if (surface)
-		cairo_surface_destroy(surface);
-	if (page)
-		g_object_unref(G_OBJECT(page));
-}
-
-static void showpage(int p)
-{
-	if (p < 0 || p >= poppler_document_get_n_pages(doc))
-		return;
-	cleanup_page();
-	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-		fb_cols() * MAXWIDTH, fb_rows() * MAXHEIGHT);
-	cairo = cairo_create(surface);
-	cairo_scale(cairo, (float) zoom / 10, (float) zoom / 10);
-	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-	cairo_paint(cairo);
+	fz_droppixmap(pix);
+	fz_freedisplaylist(list);
+	pdf_freepage(page);
+	pdf_agestore(xref->store, 3);
 	num = p;
-	page = poppler_document_get_page(doc, p);
-	poppler_page_render(page, cairo);
 	head = 0;
 	draw();
+	return 0;
 }
 
 static int readkey(void)
@@ -110,7 +119,7 @@ static void printinfo(void)
 {
 	printf("\x1b[H");
 	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K",
-		filename, num + 1, poppler_document_get_n_pages(doc), zoom * 10);
+		filename, num, pagecount, zoom * 10);
 	fflush(stdout);
 }
 
@@ -141,10 +150,10 @@ static void mainloop()
 	int c;
 	term_setup();
 	signal(SIGCONT, sigcont);
-	showpage(0);
+	showpage(1);
 	while ((c = readkey()) != -1) {
-		int maxhead = cairo_image_surface_get_height(surface) - fb_rows();
-		int maxleft = cairo_image_surface_get_width(surface) - fb_cols();
+		int maxhead = PDFROWS - fb_rows();
+		int maxleft = PDFCOLS - fb_cols();
 		switch (c) {
 		case CTRLKEY('f'):
 		case 'J':
@@ -155,7 +164,7 @@ static void mainloop()
 			showpage(num - getcount(1));
 			break;
 		case 'G':
-			showpage(getcount(poppler_document_get_n_pages(doc)) - 1);
+			showpage(getcount(pagecount));
 			break;
 		case 'z':
 			zoom = getcount(15);
@@ -216,7 +225,7 @@ static void mainloop()
 	}
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 	char *hide = "\x1b[?25l";
 	char *show = "\x1b[?25h";
@@ -225,27 +234,27 @@ int main(int argc, char* argv[])
 		printf("usage: fbpdf filename\n");
 		return 1;
 	}
-	g_type_init();
 	strcpy(filename, argv[1]);
-	if (load_document()) {
+	fz_accelerate();
+	glyphcache = fz_newglyphcache();
+	if (pdf_openxref(&xref, filename, NULL)) {
 		printf("cannot open file\n");
 		return 1;
 	}
-	if (poppler_document_get_n_pages(doc)) {
-		write(STDIN_FILENO, hide, strlen(hide));
-		write(STDOUT_FILENO, clear, strlen(clear));
-		printinfo();
-		fb_init();
-		mainloop();
-		cleanup_page();
-		fb_free();
-		write(STDIN_FILENO, show, strlen(show));
-		printf("\n");
-	} else {
-		printf("zero pages!\n");
+	if (pdf_loadpagetree(xref))
 		return 1;
-	}
-	if (doc)
-		g_object_unref(G_OBJECT(doc));
+	pagecount = pdf_getpagecount(xref);
+
+	write(STDIN_FILENO, hide, strlen(hide));
+	write(STDOUT_FILENO, clear, strlen(clear));
+	printinfo();
+	fb_init();
+	mainloop();
+	fb_free();
+	write(STDIN_FILENO, show, strlen(show));
+	printf("\n");
+
+	pdf_freexref(xref);
+	fz_freeglyphcache(glyphcache);
 	return 0;
 }

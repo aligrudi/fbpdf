@@ -1,14 +1,12 @@
+MUPDF_PATH = .
 CC = cc
-CFLAGS = -std=gnu89 -pedantic -Wall -O2 \
-	`pkg-config --cflags poppler-glib`
-LDFLAGS = `pkg-config --libs poppler-glib`
+CFLAGS = -Wall -Os -I$(MUPDF_PATH)/include
+LDFLAGS = -lm -L$(MUPDF_PATH)/lib -lmupdf -lfreetype -ljbig2dec -ljpeg -lz -lopenjpeg
 
 all: fbpdf
 .c.o:
 	$(CC) -c $(CFLAGS) $<
 fbpdf: fbpdf.o draw.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 clean:
 	-rm -f *.o fbpdf
-ctags:
-	ctags *.[hc]
