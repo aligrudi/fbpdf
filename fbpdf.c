@@ -1,7 +1,7 @@
 /*
  * fbpdf - a small framebuffer pdf viewer using mupdf
  *
- * Copyright (C) 2009-2010 Ali Gholami Rudi
+ * Copyright (C) 2009-2011 Ali Gholami Rudi
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License, as published by the
@@ -143,7 +143,7 @@ static void sigcont(int sig)
 	term_setup();
 }
 
-static void mainloop()
+static void mainloop(void)
 {
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
