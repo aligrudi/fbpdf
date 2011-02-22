@@ -3,9 +3,7 @@
  *
  * Copyright (C) 2009-2011 Ali Gholami Rudi
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License, as published by the
- * Free Software Foundation.
+ * This program is released under GNU GPL version 2.
  */
 #include <ctype.h>
 #include <signal.h>
@@ -14,9 +12,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <pty.h>
-#include "fitz.h"
-#include "mupdf.h"
 #include "draw.h"
+#include "doc.h"
 
 #define PAGESTEPS		8
 #define CTRLKEY(x)		((x) - 96)
@@ -35,8 +32,7 @@ static int head;
 static int left;
 static int count;
 
-static fz_glyphcache *glyphcache;
-static pdf_xref *xref;
+static struct doc *doc;
 static int pagecount;
 
 static void draw(void)
@@ -48,52 +44,10 @@ static void draw(void)
 
 static int showpage(int p)
 {
-	fz_matrix ctm;
-	fz_bbox bbox;
-	fz_pixmap *pix;
-	fz_device *dev;
-	fz_obj *pageobj;
-	fz_displaylist *list;
-	pdf_page *page;
-	int x, y, w, h;
 	if (p < 1 || p > pagecount)
 		return 0;
-
 	memset(pbuf, 0x00, sizeof(pbuf));
-
-	pageobj = pdf_getpageobject(xref, p);
-	if (pdf_loadpage(&page, xref, pageobj))
-		return 1;
-	list = fz_newdisplaylist();
-	dev = fz_newlistdevice(list);
-	if (pdf_runpage(xref, page, dev, fz_identity))
-		return 1;
-	fz_freedevice(dev);
-
-	ctm = fz_translate(0, -page->mediabox.y1);
-	ctm = fz_concat(ctm, fz_scale((float) zoom / 10, (float) -zoom / 10));
-	bbox = fz_roundrect(fz_transformrect(ctm, page->mediabox));
-	w = bbox.x1 - bbox.x0;
-	h = bbox.y1 - bbox.y0;
-
-	pix = fz_newpixmapwithrect(fz_devicergb, bbox);
-	fz_clearpixmap(pix, 0xff);
-
-	dev = fz_newdrawdevice(glyphcache, pix);
-	fz_executedisplaylist(list, dev, ctm);
-	fz_freedevice(dev);
-
-	for (y = 0; y < MIN(pix->h, PDFROWS); y++) {
-		for (x = 0; x < MIN(pix->w, PDFCOLS); x++) {
-			unsigned char *s = pix->samples + y * pix->w * 4 + x * 4;
-			pbuf[y * PDFCOLS + x] = fb_color(s[0], s[1], s[2]);
-
-		}
-	}
-	fz_droppixmap(pix);
-	fz_freedisplaylist(list);
-	pdf_freepage(page);
-	pdf_agestore(xref->store, 3);
+	doc_draw(doc, pbuf, p, PDFROWS, PDFCOLS, zoom);
 	num = p;
 	head = 0;
 	draw();
@@ -235,15 +189,12 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	strcpy(filename, argv[1]);
-	fz_accelerate();
-	glyphcache = fz_newglyphcache();
-	if (pdf_openxref(&xref, filename, NULL)) {
+	doc = doc_open(filename);
+	if (!doc) {
 		printf("cannot open file\n");
 		return 1;
 	}
-	if (pdf_loadpagetree(xref))
-		return 1;
-	pagecount = pdf_getpagecount(xref);
+	pagecount = doc_pages(doc);
 
 	write(STDIN_FILENO, hide, strlen(hide));
 	write(STDOUT_FILENO, clear, strlen(clear));
@@ -253,8 +204,6 @@ int main(int argc, char *argv[])
 	fb_free();
 	write(STDIN_FILENO, show, strlen(show));
 	printf("\n");
-
-	pdf_freexref(xref);
-	fz_freeglyphcache(glyphcache);
+	doc_close(doc);
 	return 0;
 }

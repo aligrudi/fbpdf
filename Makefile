@@ -6,7 +6,7 @@ LDFLAGS = -lm -L$(MUPDF_PATH)/lib -lmupdf -lfreetype -ljbig2dec -ljpeg -lz -lope
 all: fbpdf
 .c.o:
 	$(CC) -c $(CFLAGS) $<
-fbpdf: fbpdf.o draw.o
+fbpdf: fbpdf.o doc.o draw.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 clean:
 	-rm -f *.o fbpdf
