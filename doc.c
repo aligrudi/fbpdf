@@ -37,7 +37,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	h = bbox.y1 - bbox.y0;
 
 	pix = fz_newpixmapwithrect(fz_devicergb, bbox);
-	fz_clearpixmap(pix, 0xff);
+	fz_clearpixmapwithcolor(pix, 0xff);
 
 	dev = fz_newdrawdevice(doc->glyphcache, pix);
 	fz_executedisplaylist(list, dev, ctm);
