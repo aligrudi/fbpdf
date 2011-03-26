@@ -10,7 +10,7 @@ struct doc {
 	pdf_xref *xref;
 };
 
-int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zoom)
+int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zoom, int rotate)
 {
 	fz_matrix ctm;
 	fz_bbox bbox;
@@ -32,6 +32,8 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 
 	ctm = fz_translate(0, -page->mediabox.y1);
 	ctm = fz_concat(ctm, fz_scale((float) zoom / 10, (float) -zoom / 10));
+	if (rotate)
+		ctm = fz_concat(ctm, fz_rotate(rotate));
 	bbox = fz_roundrect(fz_transformrect(ctm, page->mediabox));
 	w = bbox.x1 - bbox.x0;
 	h = bbox.y1 - bbox.y0;

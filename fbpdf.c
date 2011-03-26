@@ -28,6 +28,7 @@ static int num = 1;
 static struct termios termios;
 static char filename[256];
 static int zoom = 15;
+static int rotate;
 static int head;
 static int left;
 static int count;
@@ -47,7 +48,7 @@ static int showpage(int p)
 	if (p < 1 || p > pagecount)
 		return 0;
 	memset(pbuf, 0x00, sizeof(pbuf));
-	doc_draw(doc, pbuf, p, PDFROWS, PDFCOLS, zoom);
+	doc_draw(doc, pbuf, p, PDFROWS, PDFCOLS, zoom, rotate);
 	num = p;
 	head = 0;
 	draw();
@@ -104,7 +105,7 @@ static void mainloop(void)
 	int c;
 	term_setup();
 	signal(SIGCONT, sigcont);
-	showpage(1);
+	showpage(num);
 	while ((c = readkey()) != -1) {
 		int maxhead = PDFROWS - fb_rows();
 		int maxleft = PDFCOLS - fb_cols();
@@ -122,6 +123,10 @@ static void mainloop(void)
 			break;
 		case 'z':
 			zoom = getcount(15);
+			showpage(num);
+			break;
+		case 'r':
+			rotate = getcount(0);
 			showpage(num);
 			break;
 		case 'i':
@@ -179,22 +184,35 @@ static void mainloop(void)
 	}
 }
 
+static char *usage =
+	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] filename\n";
+
 int main(int argc, char *argv[])
 {
 	char *hide = "\x1b[?25l";
 	char *show = "\x1b[?25h";
 	char *clear = "\x1b[2J";
+	int i = 1;
 	if (argc < 2) {
-		printf("usage: fbpdf filename\n");
+		printf(usage);
 		return 1;
 	}
-	strcpy(filename, argv[1]);
+	strcpy(filename, argv[argc - 1]);
 	doc = doc_open(filename);
 	if (!doc) {
 		printf("cannot open file\n");
 		return 1;
 	}
 	pagecount = doc_pages(doc);
+	while (i + 2 < argc && argv[i][0] == '-') {
+		if (argv[i][1] == 'r')
+			rotate = atoi(argv[i + 1]);
+		if (argv[i][1] == 'z')
+			zoom = atoi(argv[i + 1]);
+		if (argv[i][1] == 'p')
+			num = atoi(argv[i + 1]);
+		i += 2;
+	}
 
 	write(STDIN_FILENO, hide, strlen(hide));
 	write(STDOUT_FILENO, clear, strlen(clear));
