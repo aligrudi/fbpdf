@@ -15,6 +15,9 @@
 #include "draw.h"
 #include "doc.h"
 
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
+#define MAX(a, b)	((a) > (b) ? (a) : (b))
+
 #define PAGESTEPS		8
 #define CTRLKEY(x)		((x) - 96)
 #define MAXWIDTH		2
@@ -217,8 +220,12 @@ int main(int argc, char *argv[])
 	write(STDIN_FILENO, hide, strlen(hide));
 	write(STDOUT_FILENO, clear, strlen(clear));
 	printinfo();
-	fb_init();
-	mainloop();
+	if (fb_init())
+		return 1;
+	if (FBM_BPP(fb_mode()) != sizeof(fbval_t))
+		fprintf(stderr, "fbpdf: fbval_t doesn't match fb depth\n");
+	else
+		mainloop();
 	fb_free();
 	write(STDIN_FILENO, show, strlen(show));
 	printf("\n");

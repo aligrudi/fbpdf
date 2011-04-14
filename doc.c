@@ -48,7 +48,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	for (y = 0; y < MIN(pix->h, rows); y++) {
 		for (x = 0; x < MIN(pix->w, cols); x++) {
 			unsigned char *s = pix->samples + y * pix->w * 4 + x * 4;
-			bitmap[y * cols + x] = fb_color(s[0], s[1], s[2]);
+			bitmap[y * cols + x] = fb_val(s[0], s[1], s[2]);
 
 		}
 	}

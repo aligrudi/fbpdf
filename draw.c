@@ -8,14 +8,15 @@
 #include <string.h>
 #include "draw.h"
 
-#define BPP		sizeof(fbval_t)
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
+#define MAX(a, b)	((a) > (b) ? (a) : (b))
 #define NLEVELS		(1 << 8)
 
 static int fd;
-static unsigned char *fb;
+static void *fb;
 static struct fb_var_screeninfo vinfo;
 static struct fb_fix_screeninfo finfo;
-static int rl, rr, gl, gr, bl, br;
+static int bpp;
 static int nr, ng, nb;
 
 static int fb_len(void)
@@ -34,7 +35,7 @@ static void fb_cmap_save(int save)
 	cmap.red = red;
 	cmap.green = green;
 	cmap.blue = blue;
-	cmap.transp = 0;
+	cmap.transp = NULL;
 	ioctl(fd, save ? FBIOGETCMAP : FBIOPUTCMAP, &cmap);
 }
 
@@ -58,61 +59,41 @@ void fb_cmap(void)
 	cmap.red = red;
 	cmap.green = green;
 	cmap.blue = blue;
-	cmap.transp = 0;
+	cmap.transp = NULL;
 
 	ioctl(fd, FBIOPUTCMAP, &cmap);
 }
 
-static void xerror(char *msg)
+unsigned fb_mode(void)
 {
-	perror(msg);
-	exit(1);
+	return (bpp << 16) | (vinfo.red.length << 8) |
+		(vinfo.green.length << 4) | (vinfo.blue.length);
 }
 
-static void xdie(char *msg)
-{
-	fprintf(stderr, "%s\n", msg);
-	exit(1);
-}
-
-static void init_colors(void)
-{
-	nr = 1 << vinfo.red.length;
-	ng = 1 << vinfo.green.length;
-	nb = 1 << vinfo.blue.length;
-	rr = 8 - vinfo.red.length;
-	rl = vinfo.red.offset;
-	gr = 8 - vinfo.green.length;
-	gl = vinfo.green.offset;
-	br = 8 - vinfo.blue.length;
-	bl = vinfo.blue.offset;
-}
-
-void fb_init(void)
+int fb_init(void)
 {
 	fd = open(FBDEV_PATH, O_RDWR);
 	if (fd == -1)
-		xerror("can't open " FBDEV_PATH);
+		goto failed;
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo) == -1)
-		xerror("ioctl failed");
+		goto failed;
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
-		xerror("ioctl failed");
-	if ((vinfo.bits_per_pixel + 7) >> 3 != BPP)
-		xdie("fbval_t does not match framebuffer depth");
+		goto failed;
 	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
-	init_colors();
+	bpp = (vinfo.bits_per_pixel + 7) >> 3;
+	nr = 1 << vinfo.red.length;
+	ng = 1 << vinfo.blue.length;
+	nb = 1 << vinfo.green.length;
 	fb = mmap(NULL, fb_len(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (fb == MAP_FAILED)
-		xerror("can't map the framebuffer");
+		goto failed;
 	fb_cmap_save(1);
 	fb_cmap();
-}
-
-void fb_set(int r, int c, fbval_t *mem, int len)
-{
-	long loc = (c + vinfo.xoffset) * BPP +
-		(r + vinfo.yoffset) * finfo.line_length;
-	memcpy(fb + loc, mem, len * BPP);
+	return 0;
+failed:
+	perror("fb_init()");
+	close(fd);
+	return 1;
 }
 
 void fb_free(void)
@@ -120,11 +101,6 @@ void fb_free(void)
 	fb_cmap_save(0);
 	munmap(fb, fb_len());
 	close(fd);
-}
-
-fbval_t fb_color(unsigned char r, unsigned char g, unsigned char b)
-{
-	return ((r >> rr) << rl) | ((g >> gr) << gl) | ((b >> br) << bl);
 }
 
 int fb_rows(void)
@@ -135,4 +111,28 @@ int fb_rows(void)
 int fb_cols(void)
 {
 	return vinfo.xres;
+}
+
+void *fb_mem(int r)
+{
+	return fb + (r + vinfo.yoffset) * finfo.line_length;
+}
+
+void fb_set(int r, int c, void *mem, int len)
+{
+	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bpp, mem, len * bpp);
+}
+
+unsigned fb_val(int r, int g, int b)
+{
+	switch (fb_mode() & 0x0fff) {
+	default:
+		fprintf(stderr, "fb_val: unknown fb_mode()\n");
+	case 0x0888:
+		return (r << 16) | (g << 8) | b;
+	case 0x0565:
+		return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+	case 0x0233:
+		return ((r >> 6) << 6) | ((g >> 5) << 3) | (b >> 5);
+	}
 }
