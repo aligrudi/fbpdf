@@ -18,7 +18,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	fz_device *dev;
 	fz_display_list *list;
 	pdf_page *page;
-	int x, y, w, h;
+	int x, y;
 
 	if (pdf_load_page(&page, doc->xref, p - 1))
 		return 1;
@@ -33,8 +33,6 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	if (rotate)
 		ctm = fz_concat(ctm, fz_rotate(rotate));
 	bbox = fz_round_rect(fz_transform_rect(ctm, page->mediabox));
-	w = bbox.x1 - bbox.x0;
-	h = bbox.y1 - bbox.y0;
 
 	pix = fz_new_pixmap_with_rect(fz_device_rgb, bbox);
 	fz_clear_pixmap_with_color(pix, 0xff);
