@@ -6,7 +6,7 @@
 #include "doc.h"
 
 struct doc {
-	fz_glyphcache *glyphcache;
+	fz_glyph_cache *glyphcache;
 	pdf_xref *xref;
 };
 
@@ -16,34 +16,32 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	fz_bbox bbox;
 	fz_pixmap *pix;
 	fz_device *dev;
-	fz_obj *pageobj;
-	fz_displaylist *list;
+	fz_display_list *list;
 	pdf_page *page;
 	int x, y, w, h;
 
-	pageobj = pdf_getpageobject(doc->xref, p);
-	if (pdf_loadpage(&page, doc->xref, pageobj))
+	if (pdf_load_page(&page, doc->xref, p - 1))
 		return 1;
-	list = fz_newdisplaylist();
-	dev = fz_newlistdevice(list);
-	if (pdf_runpage(doc->xref, page, dev, fz_identity))
+	list = fz_new_display_list();
+	dev = fz_new_list_device(list);
+	if (pdf_run_page(doc->xref, page, dev, fz_identity))
 		return 1;
-	fz_freedevice(dev);
+	fz_free_device(dev);
 
 	ctm = fz_translate(0, -page->mediabox.y1);
 	ctm = fz_concat(ctm, fz_scale((float) zoom / 10, (float) -zoom / 10));
 	if (rotate)
 		ctm = fz_concat(ctm, fz_rotate(rotate));
-	bbox = fz_roundrect(fz_transformrect(ctm, page->mediabox));
+	bbox = fz_round_rect(fz_transform_rect(ctm, page->mediabox));
 	w = bbox.x1 - bbox.x0;
 	h = bbox.y1 - bbox.y0;
 
-	pix = fz_newpixmapwithrect(fz_devicergb, bbox);
-	fz_clearpixmapwithcolor(pix, 0xff);
+	pix = fz_new_pixmap_with_rect(fz_device_rgb, bbox);
+	fz_clear_pixmap_with_color(pix, 0xff);
 
-	dev = fz_newdrawdevice(doc->glyphcache, pix);
-	fz_executedisplaylist(list, dev, ctm);
-	fz_freedevice(dev);
+	dev = fz_new_draw_device(doc->glyphcache, pix);
+	fz_execute_display_list(list, dev, ctm, bbox);
+	fz_free_device(dev);
 
 	for (y = 0; y < MIN(pix->h, rows); y++) {
 		for (x = 0; x < MIN(pix->w, cols); x++) {
@@ -52,28 +50,28 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 
 		}
 	}
-	fz_droppixmap(pix);
-	fz_freedisplaylist(list);
-	pdf_freepage(page);
-	pdf_agestore(doc->xref->store, 3);
+	fz_drop_pixmap(pix);
+	fz_free_display_list(list);
+	pdf_free_page(page);
+	pdf_age_store(doc->xref->store, 3);
 	return 0;
 }
 
 int doc_pages(struct doc *doc)
 {
-	return pdf_getpagecount(doc->xref);
+	return pdf_count_pages(doc->xref);
 }
 
 struct doc *doc_open(char *path)
 {
 	struct doc *doc = malloc(sizeof(*doc));
 	fz_accelerate();
-	doc->glyphcache = fz_newglyphcache();
-	if (pdf_openxref(&doc->xref, path, NULL)) {
+	doc->glyphcache = fz_new_glyph_cache();
+	if (pdf_open_xref(&doc->xref, path, NULL)) {
 		free(doc);
 		return NULL;
 	}
-	if (pdf_loadpagetree(doc->xref)) {
+	if (pdf_load_page_tree(doc->xref)) {
 		free(doc);
 		return NULL;
 	}
@@ -82,7 +80,7 @@ struct doc *doc_open(char *path)
 
 void doc_close(struct doc *doc)
 {
-	pdf_freexref(doc->xref);
-	fz_freeglyphcache(doc->glyphcache);
+	pdf_free_xref(doc->xref);
+	fz_free_glyph_cache(doc->glyphcache);
 	free(doc);
 }
