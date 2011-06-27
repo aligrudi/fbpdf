@@ -1,12 +1,14 @@
-MUPDF_PATH = .
+PREFIX = .
 CC = cc
-CFLAGS = -Wall -Os -I$(MUPDF_PATH)/include
-LDFLAGS = -lm -L$(MUPDF_PATH)/lib -lmupdf -lfitz -lfreetype -ljbig2dec -ljpeg -lz -lopenjpeg
+CFLAGS = -Wall -O2 -I$(PREFIX)/include
+LDFLAGS = -L$(PREFIX)/lib
 
 all: fbpdf
 .c.o:
 	$(CC) -c $(CFLAGS) $<
-fbpdf: fbpdf.o doc.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+fbpdf: fbpdf.o pdf.o draw.o
+	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lfitz -lfreetype -ljbig2dec -ljpeg -lz -lopenjpeg -lm
+fbdjvu: fbpdf.o djvu.o draw.o
+	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++
 clean:
-	-rm -f *.o fbpdf
+	-rm -f *.o fbpdf fbdjvu
