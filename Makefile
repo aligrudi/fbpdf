@@ -3,12 +3,20 @@ CC = cc
 CFLAGS = -Wall -O2 -I$(PREFIX)/include
 LDFLAGS = -L$(PREFIX)/lib
 
-all: fbpdf
+all: fbpdf fbdjvu
 .c.o:
 	$(CC) -c $(CFLAGS) $<
-fbpdf: fbpdf.o pdf.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lfitz -lfreetype -ljbig2dec -ljpeg -lz -lopenjpeg -lm
-fbdjvu: fbpdf.o djvu.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++
 clean:
-	-rm -f *.o fbpdf fbdjvu
+	-rm -f *.o fbpdf fbdjvu fbpdf2
+
+# pdf support using mupdf
+fbpdf: fbpdf.o mupdf.o draw.o
+	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lfitz -lfreetype \
+			-ljbig2dec -ljpeg -lz -lopenjpeg -lm
+# djvu support
+fbdjvu: fbpdf.o djvulibre.o draw.o
+	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++
+
+# pdf support using poppler
+fbpdf2: fbpdf.o poppler.o draw.o
+	$(CC) -o $@ $^ $(LDFLAGS) `pkg-config --libs poppler-glib`
