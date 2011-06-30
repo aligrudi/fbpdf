@@ -30,6 +30,7 @@ static fbval_t pbuf[PDFROWS * PDFCOLS];
 static int num = 1;
 static struct termios termios;
 static char filename[256];
+static int mark[128];		/* page marks */
 static int zoom = 15;
 static int rotate;
 static int head;
@@ -105,7 +106,7 @@ static void mainloop(void)
 {
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
-	int c;
+	int c, c2;
 	term_setup();
 	signal(SIGCONT, sigcont);
 	showpage(num);
@@ -140,6 +141,17 @@ static void mainloop(void)
 			return;
 		case 27:
 			count = 0;
+			break;
+		case 'm':
+			c2 = readkey();
+			if (isalpha(c2))
+				mark[c2] = num;
+			break;
+		case '`':
+		case '\'':
+			c2 = readkey();
+			if (isalpha(c2) && mark[c2])
+				showpage(mark[c2]);
 			break;
 		default:
 			if (isdigit(c))
