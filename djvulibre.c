@@ -65,6 +65,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols,
 	/* mode: DDJVU_RENDER_(BLACK|COLOR|BACKGROUND|FOREGROUND) */
 	djvu_render(page, DDJVU_RENDER_FOREGROUND, img, SIZE, &rect, &rect);
 	ddjvu_page_release(page);
+	zoom /= 4;
 	for (i = 0; i < ih * zoom / 10; i++)
 		for (j = 0; j < iw * zoom / 10; j++)
 			bitmap[i * cols + j] = img[i * 10 / zoom * SIZE + j * 10 / zoom];
