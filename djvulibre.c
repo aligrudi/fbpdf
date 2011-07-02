@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include <ddjvuapi.h>
+#include <libdjvu/ddjvuapi.h>
 #include "draw.h"
 #include "doc.h"
 
