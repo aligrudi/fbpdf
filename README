@@ -1,0 +1,44 @@
+FBPDF
+=====
+
+fbpdf is a framebuffer pdf/djvu file viewer.  It can use either
+mupdf or poppler libraries for rendering pdf files and it uses
+djvulibre library for rendering djvu files.  Note that fbpdf
+creates different binaries for each library.  So if you want to
+use fbpdf only for viewing pdf files using mupdf library you
+can compile it using "make fbpdf".  See the Makefile for other
+targets.  The following options can be specified when starting
+fbpdf (or fbdjvu and fbpdf2):
+
+  fbpdf [-r rotation] [-z zoom x10] [-p page] filename
+
+KEYS
+====
+
+The following table describes fbpdf keybinding.  Most of these
+commands accept a numerical prefix.  For instance, '^F' tells
+fbpdf to go to the next page while '5^F' tells it to move to
+the fifth next page.
+
+==============	================================================
+KEY		ACTION
+==============	================================================
+^F/J		next page
+^B/K		previous page
+G		goto page (goto the last page if no prefix)
+z		set zoom multiplied by 10 (i.e. '15z' = 150%)
+r		set rotation in degrees
+i		print info
+q		quit
+^[		(escape) clear numerical prefix
+mx		mark page as 'x' (or any other letter)
+'x		jump to the page marked as 'x'
+j		scroll down
+k		scroll up
+H		show top
+M		show middle
+L		show bottom
+' '/^D		(space) page down
+^H/^U		(backspace) page up
+^L		redraw
+==============	================================================
