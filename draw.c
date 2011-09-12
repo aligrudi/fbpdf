@@ -18,6 +18,7 @@ static struct fb_var_screeninfo vinfo;
 static struct fb_fix_screeninfo finfo;
 static int bpp;
 static int nr, ng, nb;
+static int rl, rr, gl, gr, bl, br;	/* fb_color() shifts */
 
 static int fb_len(void)
 {
@@ -70,6 +71,19 @@ unsigned fb_mode(void)
 		(vinfo.green.length << 4) | (vinfo.blue.length);
 }
 
+static void init_colors(void)
+{
+	nr = 1 << vinfo.red.length;
+	ng = 1 << vinfo.blue.length;
+	nb = 1 << vinfo.green.length;
+	rr = 8 - vinfo.red.length;
+	rl = vinfo.red.offset;
+	gr = 8 - vinfo.green.length;
+	gl = vinfo.green.offset;
+	br = 8 - vinfo.blue.length;
+	bl = vinfo.blue.offset;
+}
+
 int fb_init(void)
 {
 	fd = open(FBDEV_PATH, O_RDWR);
@@ -81,12 +95,10 @@ int fb_init(void)
 		goto failed;
 	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
 	bpp = (vinfo.bits_per_pixel + 7) >> 3;
-	nr = 1 << vinfo.red.length;
-	ng = 1 << vinfo.blue.length;
-	nb = 1 << vinfo.green.length;
 	fb = mmap(NULL, fb_len(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (fb == MAP_FAILED)
 		goto failed;
+	init_colors();
 	fb_cmap_save(1);
 	fb_cmap();
 	return 0;
@@ -125,14 +137,5 @@ void fb_set(int r, int c, void *mem, int len)
 
 unsigned fb_val(int r, int g, int b)
 {
-	switch (fb_mode() & 0x0fff) {
-	default:
-		fprintf(stderr, "fb_val: unknown fb_mode()\n");
-	case 0x0888:
-		return (r << 16) | (g << 8) | b;
-	case 0x0565:
-		return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-	case 0x0233:
-		return ((r >> 6) << 6) | ((g >> 5) << 3) | (b >> 5);
-	}
+	return ((r >> rr) << rl) | ((g >> gr) << gl) | ((b >> br) << bl);
 }
