@@ -44,4 +44,5 @@ L		show bottom
 ' '/^D		(space) page down
 ^H/^U		(backspace) page up
 ^L		redraw
+e		reload current file
 ==============	================================================

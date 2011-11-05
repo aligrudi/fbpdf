@@ -101,6 +101,13 @@ static void sigcont(int sig)
 	term_setup();
 }
 
+static void reload(void)
+{
+	doc_close(doc);
+	doc = doc_open(filename);
+	showpage(num, head);
+}
+
 static void mainloop(void)
 {
 	int step = fb_rows() / PAGESTEPS;
@@ -147,6 +154,9 @@ static void mainloop(void)
 				mark[c2] = num;
 				mark_head[c2] = head;
 			}
+			break;
+		case 'e':
+			reload();
 			break;
 		case '`':
 		case '\'':
