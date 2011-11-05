@@ -33,8 +33,11 @@ q		quit
 ^[		(escape) clear numerical prefix
 mx		mark page as 'x' (or any other letter)
 'x		jump to the page marked as 'x'
+`x		jump to the page and position marked as 'x'
 j		scroll down
 k		scroll up
+h		scroll left
+l		scroll right
 H		show top
 M		show middle
 L		show bottom

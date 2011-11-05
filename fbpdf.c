@@ -26,19 +26,18 @@
 #define PDFROWS			(1 << 12)
 
 static fbval_t pbuf[PDFROWS * PDFCOLS];
+static struct doc *doc;
 
 static int num = 1;
 static struct termios termios;
 static char filename[256];
 static int mark[128];		/* page marks */
+static int mark_head[128];	/* head in page marks */
 static int zoom = 15;
 static int rotate;
 static int head;
 static int left;
 static int count;
-
-static struct doc *doc;
-static int pagecount;
 
 static void draw(void)
 {
@@ -47,14 +46,14 @@ static void draw(void)
 		fb_set(i - head, 0, pbuf + i * PDFCOLS + left, fb_cols());
 }
 
-static int showpage(int p)
+static int showpage(int p, int h)
 {
-	if (p < 1 || p > pagecount)
+	if (p < 1 || p > doc_pages(doc))
 		return 0;
 	memset(pbuf, 0x00, sizeof(pbuf));
 	doc_draw(doc, pbuf, p, PDFROWS, PDFCOLS, zoom, rotate);
 	num = p;
-	head = 0;
+	head = h;
 	draw();
 	return 0;
 }
@@ -78,7 +77,7 @@ static void printinfo(void)
 {
 	printf("\x1b[H");
 	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K",
-		filename, num, pagecount, zoom * 10);
+		filename, num, doc_pages(doc), zoom * 10);
 	fflush(stdout);
 }
 
@@ -109,29 +108,29 @@ static void mainloop(void)
 	int c, c2;
 	term_setup();
 	signal(SIGCONT, sigcont);
-	showpage(num);
+	showpage(num, 0);
 	while ((c = readkey()) != -1) {
 		int maxhead = PDFROWS - fb_rows();
 		int maxleft = PDFCOLS - fb_cols();
 		switch (c) {
 		case CTRLKEY('f'):
 		case 'J':
-			showpage(num + getcount(1));
+			showpage(num + getcount(1), 0);
 			break;
 		case CTRLKEY('b'):
 		case 'K':
-			showpage(num - getcount(1));
+			showpage(num - getcount(1), 0);
 			break;
 		case 'G':
-			showpage(getcount(pagecount));
+			showpage(getcount(doc_pages(doc)), 0);
 			break;
 		case 'z':
 			zoom = getcount(15);
-			showpage(num);
+			showpage(num, 0);
 			break;
 		case 'r':
 			rotate = getcount(0);
-			showpage(num);
+			showpage(num, 0);
 			break;
 		case 'i':
 			printinfo();
@@ -144,14 +143,16 @@ static void mainloop(void)
 			break;
 		case 'm':
 			c2 = readkey();
-			if (isalpha(c2))
+			if (isalpha(c2)) {
 				mark[c2] = num;
+				mark_head[c2] = head;
+			}
 			break;
 		case '`':
 		case '\'':
 			c2 = readkey();
 			if (isalpha(c2) && mark[c2])
-				showpage(mark[c2]);
+				showpage(mark[c2], c == '`' ? mark_head[c2] : 0);
 			break;
 		default:
 			if (isdigit(c))
@@ -215,10 +216,9 @@ int main(int argc, char *argv[])
 	strcpy(filename, argv[argc - 1]);
 	doc = doc_open(filename);
 	if (!doc) {
-		printf("cannot open file\n");
+		fprintf(stderr, "cannot open <%s>\n", filename);
 		return 1;
 	}
-	pagecount = doc_pages(doc);
 	while (i + 2 < argc && argv[i][0] == '-') {
 		if (argv[i][1] == 'r')
 			rotate = atoi(argv[i + 1]);
