@@ -1,13 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fitz.h"
-#include "mupdf.h"
 #include "draw.h"
 #include "doc.h"
 
 struct doc {
-	fz_glyph_cache *glyphcache;
-	pdf_xref *xref;
+	fz_context *ctx;
+	fz_document *pdf;
 };
 
 int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zoom, int rotate)
@@ -16,60 +15,55 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	fz_bbox bbox;
 	fz_pixmap *pix;
 	fz_device *dev;
-	fz_display_list *list;
-	pdf_page *page;
+	fz_page *page;
+	fz_rect rect;
+	int h, w;
 	int x, y;
 
-	if (pdf_load_page(&page, doc->xref, p - 1))
+	if (!(page = fz_load_page(doc->pdf, p - 1)))
 		return 1;
-	list = fz_new_display_list();
-	dev = fz_new_list_device(list);
-	if (pdf_run_page(doc->xref, page, dev, fz_identity))
-		return 1;
-	fz_free_device(dev);
-
-	ctm = fz_translate(0, -page->mediabox.y1);
-	ctm = fz_concat(ctm, fz_scale((float) zoom / 10, (float) -zoom / 10));
+	ctm = fz_scale((float) zoom / 10, (float) -zoom / 10);
+	ctm = fz_concat(ctm, fz_translate(0, -100));
 	if (rotate)
 		ctm = fz_concat(ctm, fz_rotate(rotate));
-	bbox = fz_round_rect(fz_transform_rect(ctm, page->mediabox));
+	rect = fz_bound_page(doc->pdf, page);
+	rect = fz_transform_rect(ctm, rect);
+	bbox = fz_round_rect(rect);
+	w = MIN(cols, rect.x1 - rect.x0);
+	h = MIN(rows, rect.y1 - rect.y0);
 
-	pix = fz_new_pixmap_with_rect(fz_device_rgb, bbox);
-	fz_clear_pixmap_with_color(pix, 0xff);
+	pix = fz_new_pixmap_with_bbox(doc->ctx, fz_device_rgb, bbox);
+	fz_clear_pixmap_with_value(doc->ctx, pix, 0xff);
 
-	dev = fz_new_draw_device(doc->glyphcache, pix);
-	fz_execute_display_list(list, dev, ctm, bbox);
+	dev = fz_new_draw_device(doc->ctx, pix);
+	fz_run_page(doc->pdf, page, dev, fz_identity, NULL);
+	fz_run_page(doc->pdf, page, dev, ctm, NULL);
 	fz_free_device(dev);
 
-	for (y = 0; y < MIN(pix->h, rows); y++) {
-		for (x = 0; x < MIN(pix->w, cols); x++) {
-			unsigned char *s = pix->samples + y * pix->w * 4 + x * 4;
-			bitmap[y * cols + x] = FB_VAL(s[0], s[1], s[2]);
+	for (y = 0; y < h; y++) {
+		for (x = 0; x < w; x++) {
+			unsigned char *s = fz_pixmap_samples(doc->ctx, pix) +
+					y * fz_pixmap_width(doc->ctx, pix) * 4 + x * 4;
+			bitmap[(h - y - 1) * cols + x] = FB_VAL(s[0], s[1], s[2]);
 
 		}
 	}
-	fz_drop_pixmap(pix);
-	fz_free_display_list(list);
-	pdf_free_page(page);
-	pdf_age_store(doc->xref->store, 3);
+	fz_drop_pixmap(doc->ctx, pix);
+	fz_free_page(doc->pdf, page);
 	return 0;
 }
 
 int doc_pages(struct doc *doc)
 {
-	return pdf_count_pages(doc->xref);
+	return fz_count_pages(doc->pdf);
 }
 
 struct doc *doc_open(char *path)
 {
 	struct doc *doc = malloc(sizeof(*doc));
-	fz_accelerate();
-	doc->glyphcache = fz_new_glyph_cache();
-	if (pdf_open_xref(&doc->xref, path, NULL)) {
-		free(doc);
-		return NULL;
-	}
-	if (pdf_load_page_tree(doc->xref)) {
+	doc->ctx = fz_new_context(NULL, NULL, FZ_STORE_DEFAULT);
+	doc->pdf = fz_open_document(doc->ctx, path);
+	if (!doc->pdf) {
 		free(doc);
 		return NULL;
 	}
@@ -78,7 +72,7 @@ struct doc *doc_open(char *path)
 
 void doc_close(struct doc *doc)
 {
-	pdf_free_xref(doc->xref);
-	fz_free_glyph_cache(doc->glyphcache);
+	fz_close_document(doc->pdf);
+	fz_free_context(doc->ctx);
 	free(doc);
 }
