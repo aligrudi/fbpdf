@@ -45,7 +45,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols,
 	ddjvu_page_t *page;
 	ddjvu_rect_t rect;
 	ddjvu_pageinfo_t info;
-	int iw, ih;
+	int w, h;
 	int i, j;
 	page = ddjvu_page_create_by_pageno(doc->doc, p - 1);
 	if (!page)
@@ -55,20 +55,22 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols,
 			return -1;
 
 	ddjvu_document_get_pageinfo(doc->doc, p - 1, &info);
-	iw = ddjvu_page_get_width(page);
-	ih = ddjvu_page_get_height(page);
 	rect.x = 0;
 	rect.y = 0;
-	rect.w = iw;
-	rect.h = ih;
+	rect.w = ddjvu_page_get_width(page);
+	rect.h = ddjvu_page_get_height(page);
 
 	/* mode: DDJVU_RENDER_(BLACK|COLOR|BACKGROUND|FOREGROUND) */
 	djvu_render(page, DDJVU_RENDER_FOREGROUND, img, SIZE, &rect, &rect);
 	ddjvu_page_release(page);
 	zoom /= 4;
-	for (i = 0; i < ih * zoom / 10; i++)
-		for (j = 0; j < iw * zoom / 10; j++)
-			bitmap[i * cols + j] = img[i * 10 / zoom * SIZE + j * 10 / zoom];
+	w = MIN(cols, rect.w * zoom / 10);
+	h = MIN(cols, rect.h * zoom / 10);
+	for (i = 0; i < h; i++) {
+		int xs = i * cols + (cols - w) / 2;
+		for (j = 0; j < w; j++)
+			bitmap[xs + j] = img[i * 10 / zoom * SIZE + j * 10 / zoom];
+	}
 	return 0;
 }
 

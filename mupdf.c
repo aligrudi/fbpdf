@@ -41,10 +41,11 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	fz_free_device(dev);
 
 	for (y = 0; y < h; y++) {
+		int xs = (h - y - 1) * cols + (cols - w) / 2;
 		for (x = 0; x < w; x++) {
 			unsigned char *s = fz_pixmap_samples(doc->ctx, pix) +
 					y * fz_pixmap_width(doc->ctx, pix) * 4 + x * 4;
-			bitmap[(h - y - 1) * cols + x] = FB_VAL(s[0], s[1], s[2]);
+			bitmap[xs + x] = FB_VAL(s[0], s[1], s[2]);
 
 		}
 	}

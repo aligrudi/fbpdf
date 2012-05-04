@@ -244,6 +244,7 @@ int main(int argc, char *argv[])
 	printinfo();
 	if (fb_init())
 		return 1;
+	left = (PDFCOLS - fb_cols()) / 2;
 	if (FBM_BPP(fb_mode()) != sizeof(fbval_t))
 		fprintf(stderr, "fbpdf: fbval_t doesn't match fb depth\n");
 	else
