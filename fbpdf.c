@@ -113,6 +113,7 @@ static void mainloop(void)
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
 	int c, c2;
+	int _zoom;
 	term_setup();
 	signal(SIGCONT, sigcont);
 	showpage(num, 0);
@@ -132,8 +133,9 @@ static void mainloop(void)
 			showpage(getcount(doc_pages(doc)), 0);
 			break;
 		case 'z':
+			_zoom = zoom;
 			zoom = getcount(15);
-			showpage(num, 0);
+			showpage(num, head * zoom / _zoom);
 			break;
 		case 'r':
 			rotate = getcount(0);
