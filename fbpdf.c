@@ -135,7 +135,7 @@ static void mainloop(void)
 		case 'z':
 			_zoom = zoom;
 			zoom = getcount(15);
-			showpage(num, head * zoom / _zoom);
+			showpage(num, MIN(maxhead, head * zoom / _zoom));
 			break;
 		case 'r':
 			rotate = getcount(0);
