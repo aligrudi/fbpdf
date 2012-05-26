@@ -31,8 +31,8 @@ static struct doc *doc;
 static int num = 1;
 static struct termios termios;
 static char filename[256];
-static int mark[128];		/* page marks */
-static int mark_head[128];	/* head in page marks */
+static int mark[128];		/* mark page number */
+static int mark_head[128];	/* mark head position */
 static int zoom = 15;
 static int rotate;
 static int head;
@@ -154,7 +154,7 @@ static void mainloop(void)
 			c2 = readkey();
 			if (isalpha(c2)) {
 				mark[c2] = num;
-				mark_head[c2] = head;
+				mark_head[c2] = head / zoom;
 			}
 			break;
 		case 'e':
@@ -164,7 +164,7 @@ static void mainloop(void)
 		case '\'':
 			c2 = readkey();
 			if (isalpha(c2) && mark[c2])
-				showpage(mark[c2], c == '`' ? mark_head[c2] : 0);
+				showpage(mark[c2], c == '`' ? mark_head[c2] * zoom : 0);
 			break;
 		default:
 			if (isdigit(c))
