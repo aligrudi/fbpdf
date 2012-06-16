@@ -36,7 +36,6 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	fz_clear_pixmap_with_value(doc->ctx, pix, 0xff);
 
 	dev = fz_new_draw_device(doc->ctx, pix);
-	fz_run_page(doc->pdf, page, dev, fz_identity, NULL);
 	fz_run_page(doc->pdf, page, dev, ctm, NULL);
 	fz_free_device(dev);
 
