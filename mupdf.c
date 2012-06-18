@@ -63,7 +63,7 @@ struct doc *doc_open(char *path)
 	struct doc *doc = malloc(sizeof(*doc));
 	doc->ctx = fz_new_context(NULL, NULL, FZ_STORE_DEFAULT);
 	doc->pdf = fz_open_document(doc->ctx, path);
-	if (!doc->pdf) {
+	if (!doc->pdf || !fz_count_pages(doc->pdf)) {
 		free(doc);
 		return NULL;
 	}
