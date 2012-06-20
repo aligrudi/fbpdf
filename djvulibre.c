@@ -65,7 +65,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols,
 	ddjvu_page_release(page);
 	zoom /= 4;
 	w = MIN(cols, rect.w * zoom / 10);
-	h = MIN(cols, rect.h * zoom / 10);
+	h = MIN(rows, rect.h * zoom / 10);
 	for (i = 0; i < h; i++) {
 		int xs = i * cols + (cols - w) / 2;
 		for (j = 0; j < w; j++)
