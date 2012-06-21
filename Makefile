@@ -15,7 +15,7 @@ fbpdf: fbpdf.o mupdf.o draw.o
 			-ljbig2dec -ljpeg -lz -lopenjpeg -lm
 # djvu support
 fbdjvu: fbpdf.o djvulibre.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++
+	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++ -lpthread
 
 # pdf support using poppler
 poppler.o: poppler.c

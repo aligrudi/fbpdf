@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <libdjvu/ddjvuapi.h>
 #include "draw.h"
 #include "doc.h"
@@ -29,10 +30,13 @@ static void djvu_render(ddjvu_page_t *page, int mode, void *bitmap, int cols,
 		ddjvu_rect_t *prect, ddjvu_rect_t *rrect)
 {
 	ddjvu_format_t *fmt;
+	int i = 0;
 	fmt = ddjvu_format_create(DDJVU_FORMAT_GREY8, 0, 0);
 	ddjvu_format_set_row_order(fmt, 1);
 
-	ddjvu_page_render(page, mode, prect, rrect, fmt, cols, bitmap);
+	while (i++ < 2 && !ddjvu_page_render(page, mode, prect,
+						rrect, fmt, cols, bitmap))
+		usleep(100000);
 	ddjvu_format_release(fmt);
 }
 
