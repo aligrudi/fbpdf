@@ -4,6 +4,8 @@
 #include "draw.h"
 #include "doc.h"
 
+#define MIN_(a, b)	((a) < (b) ? (a) : (b))
+
 struct doc {
 	fz_context *ctx;
 	fz_document *pdf;
@@ -29,8 +31,8 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	rect = fz_bound_page(doc->pdf, page);
 	rect = fz_transform_rect(ctm, rect);
 	bbox = fz_round_rect(rect);
-	w = MIN(cols, rect.x1 - rect.x0);
-	h = MIN(rows, rect.y1 - rect.y0);
+	w = MIN_(cols, rect.x1 - rect.x0);
+	h = MIN_(rows, rect.y1 - rect.y0);
 
 	pix = fz_new_pixmap_with_bbox(doc->ctx, fz_device_rgb, bbox);
 	fz_clear_pixmap_with_value(doc->ctx, pix, 0xff);
