@@ -11,7 +11,8 @@ struct doc {
 	fz_document *pdf;
 };
 
-int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zoom, int rotate)
+int doc_draw(struct doc *doc, int p, int zoom, int rotate,
+		fbval_t *bitmap, int *rows, int *cols)
 {
 	fz_matrix ctm;
 	fz_bbox bbox;
@@ -31,8 +32,8 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	rect = fz_bound_page(doc->pdf, page);
 	rect = fz_transform_rect(ctm, rect);
 	bbox = fz_round_rect(rect);
-	w = MIN_(cols, rect.x1 - rect.x0);
-	h = MIN_(rows, rect.y1 - rect.y0);
+	w = MIN_(*cols, rect.x1 - rect.x0);
+	h = MIN_(*rows, rect.y1 - rect.y0);
 
 	pix = fz_new_pixmap_with_bbox(doc->ctx, fz_device_rgb, bbox);
 	fz_clear_pixmap_with_value(doc->ctx, pix, 0xff);
@@ -42,7 +43,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	fz_free_device(dev);
 
 	for (y = 0; y < h; y++) {
-		int xs = (h - y - 1) * cols + (cols - w) / 2;
+		int xs = (h - y - 1) * *cols + (*cols - w) / 2;
 		for (x = 0; x < w; x++) {
 			unsigned char *s = fz_pixmap_samples(doc->ctx, pix) +
 					y * fz_pixmap_width(doc->ctx, pix) * 4 + x * 4;
@@ -52,6 +53,8 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols, int zo
 	}
 	fz_drop_pixmap(doc->ctx, pix);
 	fz_free_page(doc->pdf, page);
+	*cols = w;
+	*rows = h;
 	return 0;
 }
 

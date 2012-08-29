@@ -25,8 +25,9 @@
 #define PDFCOLS			(1 << 11)
 #define PDFROWS			(1 << 12)
 
-static fbval_t pbuf[PDFROWS * PDFCOLS];
 static struct doc *doc;
+static fbval_t pbuf[PDFROWS * PDFCOLS];	/* current page */
+static int prows, pcols;		/* the dimensions of current page */
 
 static int num = 1;
 static struct termios termios;
@@ -51,11 +52,20 @@ static int showpage(int p, int h)
 	if (p < 1 || p > doc_pages(doc))
 		return 0;
 	memset(pbuf, 0x00, sizeof(pbuf));
-	doc_draw(doc, pbuf, p, PDFROWS, PDFCOLS, zoom, rotate);
+	prows = PDFROWS;
+	pcols = PDFCOLS;
+	doc_draw(doc, p, zoom, rotate, pbuf, &prows, &pcols);
 	num = p;
 	head = h;
 	draw();
 	return 0;
+}
+
+static void zoom_page(int z)
+{
+	int _zoom = zoom;
+	zoom = z;
+	showpage(num, MIN(PDFROWS - fb_rows(), head * zoom / _zoom));
 }
 
 static int readkey(void)
@@ -113,13 +123,10 @@ static void mainloop(void)
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
 	int c, c2;
-	int _zoom;
 	term_setup();
 	signal(SIGCONT, sigcont);
 	showpage(num, 0);
 	while ((c = readkey()) != -1) {
-		int maxhead = PDFROWS - fb_rows();
-		int maxleft = PDFCOLS - fb_cols();
 		switch (c) {
 		case CTRLKEY('f'):
 		case 'J':
@@ -133,9 +140,13 @@ static void mainloop(void)
 			showpage(getcount(doc_pages(doc)), 0);
 			break;
 		case 'z':
-			_zoom = zoom;
-			zoom = getcount(15);
-			showpage(num, MIN(maxhead, head * zoom / _zoom));
+			zoom_page(getcount(15));
+			break;
+		case 'w':
+			zoom_page(zoom * fb_cols() / pcols);
+			break;
+		case 'f':
+			zoom_page(zoom * fb_rows() / prows);
 			break;
 		case 'r':
 			rotate = getcount(0);
@@ -187,10 +198,10 @@ static void mainloop(void)
 			head = 0;
 			break;
 		case 'L':
-			head = maxhead;
+			head = MAX(0, prows - fb_rows());
 			break;
 		case 'M':
-			head = maxhead / 2;
+			head = prows / 2;
 			break;
 		case ' ':
 		case CTRL('d'):
@@ -206,8 +217,8 @@ static void mainloop(void)
 			/* no need to redraw */
 			continue;
 		}
-		head = MAX(0, MIN(maxhead, head));
-		left = MAX(0, MIN(maxleft, left));
+		head = MAX(0, MIN(PDFROWS - fb_rows(), head));
+		left = MAX(0, MIN(PDFCOLS - fb_cols(), left));
 		draw();
 	}
 }

@@ -8,8 +8,8 @@ struct doc {
 	PopplerDocument *doc;
 };
 
-int doc_draw(struct doc *doc, fbval_t *bitmap, int p,
-		int rows, int cols, int zoom, int rotate)
+int doc_draw(struct doc *doc, int page, int zoom, int rotate,
+		fbval_t *bitmap, int *rows, int *cols)
 {
 	cairo_t *cairo;
 	cairo_surface_t *surface;
@@ -18,7 +18,7 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p,
 	int i, j;
 	int h, w;
 	int iw;
-	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, cols, rows);
+	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, *cols, *rows);
 	cairo = cairo_create(surface);
 	cairo_scale(cairo, (float) zoom / 10, (float) zoom / 10);
 	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
@@ -27,17 +27,19 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p,
 	page = poppler_document_get_page(doc->doc, p - 1);
 	poppler_page_render(page, cairo);
 	iw = cairo_image_surface_get_width(surface);
-	h = MIN(rows, cairo_image_surface_get_height(surface));
-	w = MIN(cols, iw);
+	h = MIN(*rows, cairo_image_surface_get_height(surface));
+	w = MIN(*cols, iw);
 	for (i = 0; i < h; i++) {
 		for (j = 0; j < w; j++) {
 			unsigned char *s = img + (i * iw + j) * 4;
-			bitmap[i * cols + j] = FB_VAL(*(s + 2), *(s + 1), *s);
+			bitmap[i * *cols + j] = FB_VAL(*(s + 2), *(s + 1), *s);
 		}
 	}
 	cairo_destroy(cairo);
 	cairo_surface_destroy(surface);
 	g_object_unref(G_OBJECT(page));
+	*cols = w;
+	*rows = h;
 	return 0;
 }
 

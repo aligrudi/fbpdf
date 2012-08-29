@@ -43,8 +43,8 @@ static void djvu_render(ddjvu_page_t *page, int mode, void *bitmap, int cols,
 #define SIZE		(1 << 13)
 static char img[SIZE * SIZE];
 
-int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols,
-		int zoom, int rotate)
+int doc_draw(struct doc *doc, int p, int zoom, int rotate,
+		fbval_t *bitmap, int *rows, int *cols)
 {
 	ddjvu_page_t *page;
 	ddjvu_rect_t rect;
@@ -68,13 +68,15 @@ int doc_draw(struct doc *doc, fbval_t *bitmap, int p, int rows, int cols,
 	djvu_render(page, DDJVU_RENDER_FOREGROUND, img, SIZE, &rect, &rect);
 	ddjvu_page_release(page);
 	zoom /= 4;
-	w = MIN(cols, rect.w * zoom / 10);
-	h = MIN(rows, rect.h * zoom / 10);
+	w = MIN(*cols, rect.w * zoom / 10);
+	h = MIN(*rows, rect.h * zoom / 10);
 	for (i = 0; i < h; i++) {
-		int xs = i * cols + (cols - w) / 2;
+		int xs = i * *cols + (*cols - w) / 2;
 		for (j = 0; j < w; j++)
 			bitmap[xs + j] = img[i * 10 / zoom * SIZE + j * 10 / zoom];
 	}
+	*cols = w;
+	*rows = h;
 	return 0;
 }
 

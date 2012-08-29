@@ -45,4 +45,6 @@ L		show bottom
 ^H/^U		(backspace) page up
 ^L		redraw
 e		reload current file
+f		fit to height
+w		fit to width
 ==============	================================================
