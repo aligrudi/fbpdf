@@ -8,7 +8,7 @@ struct doc {
 	PopplerDocument *doc;
 };
 
-int doc_draw(struct doc *doc, int page, int zoom, int rotate,
+int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 		fbval_t *bitmap, int *rows, int *cols)
 {
 	cairo_t *cairo;
