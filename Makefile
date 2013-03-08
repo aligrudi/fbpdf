@@ -19,6 +19,6 @@ fbdjvu: fbpdf.o djvulibre.o draw.o
 
 # pdf support using poppler
 poppler.o: poppler.c
-	$(CC) -c $(CFLAGS) `pkg-config --cflags poppler-glib` $<
+	$(CXX) -c $(CFLAGS) `pkg-config --cflags poppler-cpp` $<
 fbpdf2: fbpdf.o poppler.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) `pkg-config --libs poppler-glib`
+	$(CXX) -o $@ $^ $(LDFLAGS) `pkg-config --libs poppler-cpp`

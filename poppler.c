@@ -1,67 +1,75 @@
 #include <stdlib.h>
 #include <string.h>
-#include <cairo/cairo.h>
-#include <glib/poppler.h>
+#include <poppler/cpp/poppler-document.h>
+#include <poppler/cpp/poppler-image.h>
+#include <poppler/cpp/poppler-page.h>
+#include <poppler/cpp/poppler-page-renderer.h>
+
+extern "C" {
 #include "doc.h"
+}
 
 struct doc {
-	PopplerDocument *doc;
+	poppler::document *doc;
 };
+
+static poppler::rotation_enum rotation(int times)
+{
+	if (times == 1)
+		return poppler::rotate_90;
+	if (times == 2)
+		return poppler::rotate_180;
+	if (times == 3)
+		return poppler::rotate_270;
+	return poppler::rotate_0;
+}
 
 int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 		fbval_t *bitmap, int *rows, int *cols)
 {
-	cairo_t *cairo;
-	cairo_surface_t *surface;
-	PopplerPage *page;
-	unsigned char *img;
-	int i, j;
+	poppler::page *page = doc->doc->create_page(p);
+	poppler::page_renderer pr;
+	int x, y;
 	int h, w;
-	int iw;
-	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, *cols, *rows);
-	cairo = cairo_create(surface);
-	cairo_scale(cairo, (float) zoom / 10, (float) zoom / 10);
-	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-	cairo_paint(cairo);
-	img = cairo_image_surface_get_data(surface);
-	page = poppler_document_get_page(doc->doc, p - 1);
-	poppler_page_render(page, cairo);
-	iw = cairo_image_surface_get_width(surface);
-	h = MIN(*rows, cairo_image_surface_get_height(surface));
-	w = MIN(*cols, iw);
-	for (i = 0; i < h; i++) {
-		for (j = 0; j < w; j++) {
-			unsigned char *s = img + (i * iw + j) * 4;
-			bitmap[i * *cols + j] = FB_VAL(*(s + 2), *(s + 1), *s);
+	unsigned char *dat;
+	pr.set_render_hint(poppler::page_renderer::antialiasing, true);
+	pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
+	poppler::image img = pr.render_page(page, 72 * zoom / 10, 72 * zoom / 10,
+				-1, -1, -1, -1, rotation((rotate + 89) / 90));
+	h = img.height();
+	w = img.width();
+	dat = (unsigned char *) img.data();
+	for (y = 0; y < h; y++) {
+		int xs = y * *cols + (*cols - w) / 2;
+		for (x = 0; x < w; x++) {
+			unsigned char *s = dat + img.bytes_per_row() * y + x * 4;
+			bitmap[xs + x] = FB_VAL(s[0], s[1], s[2]);
 		}
 	}
-	cairo_destroy(cairo);
-	cairo_surface_destroy(surface);
-	g_object_unref(G_OBJECT(page));
-	*cols = w;
 	*rows = h;
+	*cols = w;
+	delete page;
 	return 0;
 }
 
 int doc_pages(struct doc *doc)
 {
-	return poppler_document_get_n_pages(doc->doc);
+	return doc->doc->pages();
 }
 
 struct doc *doc_open(char *path)
 {
-	struct doc *doc = malloc(sizeof(*doc));
-	char abspath[PATH_MAX];
-	char uri[PATH_MAX + 16];
-	realpath(path, abspath);
-	snprintf(uri, sizeof(uri), "file://%s", abspath);
-	g_type_init();
-	doc->doc = poppler_document_new_from_file(uri, NULL, NULL);
+	struct doc *doc = (struct doc *) malloc(sizeof(*doc));
+	doc->doc = poppler::document::load_from_file(path);
+	if (!doc->doc) {
+		doc_close(doc);
+		return NULL;
+	}
 	return doc;
 }
 
 void doc_close(struct doc *doc)
 {
-	g_object_unref(G_OBJECT(doc->doc));
+	delete doc->doc;
 	free(doc);
 }

@@ -1,9 +1,9 @@
 /*
  * fbpdf - a small framebuffer pdf viewer using mupdf
  *
- * Copyright (C) 2009-2012 Ali Gholami Rudi <ali at rudi dot ir>
+ * Copyright (C) 2009-2013 Ali Gholami Rudi <ali at rudi dot ir>
  *
- * This program is released under the modified BSD license.
+ * This program is released under the Modified BSD license.
  */
 #include <ctype.h>
 #include <signal.h>

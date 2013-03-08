@@ -2,7 +2,8 @@
 typedef unsigned int fbval_t;
 
 /* optimized version of fb_val() */
-#define FB_VAL(r, g, b)	fb_val((r), (g), (b))
+//#define FB_VAL(r, g, b)	fb_val((r), (g), (b))
+#define FB_VAL(r, g, b)        (((r) << 16) | ((g) << 8) | (b))
 
 struct doc *doc_open(char *path);
 int doc_pages(struct doc *doc);
