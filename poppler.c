@@ -27,7 +27,7 @@ static poppler::rotation_enum rotation(int times)
 int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 		fbval_t *bitmap, int *rows, int *cols)
 {
-	poppler::page *page = doc->doc->create_page(p);
+	poppler::page *page = doc->doc->create_page(p - 1);
 	poppler::page_renderer pr;
 	int x, y;
 	int h, w;
@@ -43,7 +43,7 @@ int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 		int xs = y * *cols + (*cols - w) / 2;
 		for (x = 0; x < w; x++) {
 			unsigned char *s = dat + img.bytes_per_row() * y + x * 4;
-			bitmap[xs + x] = FB_VAL(s[0], s[1], s[2]);
+			bitmap[xs + x] = FB_VAL(s[2], s[1], s[0]);
 		}
 	}
 	*rows = h;
