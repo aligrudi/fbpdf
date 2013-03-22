@@ -4,7 +4,7 @@ CFLAGS = -Wall -O2 -I$(PREFIX)/include
 LDFLAGS = -L$(PREFIX)/lib
 
 all: fbpdf fbdjvu
-%.o: %.c
+%.o: %.c doc.h
 	$(CC) -c $(CFLAGS) $<
 clean:
 	-rm -f *.o fbpdf fbdjvu fbpdf2
