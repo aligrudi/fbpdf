@@ -118,6 +118,38 @@ static void reload(void)
 	showpage(num, head);
 }
 
+static int rightmost(void)
+{
+	int ret = 0;
+	int i, j;
+	for (i = 0; i < prows; i++) {
+		j = PDFCOLS - 1;
+		while (j > ret && pbuf[i * PDFCOLS + j] == FB_VAL(0, 0, 0))
+			j--;
+		while (j > ret && pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
+			j--;
+		if (ret < j)
+			ret = j;
+	}
+	return ret;
+}
+
+static int leftmost(void)
+{
+	int ret = PDFCOLS;
+	int i, j;
+	for (i = 0; i < prows; i++) {
+		j = 0;
+		while (j < ret && pbuf[i * PDFCOLS + j] == FB_VAL(0, 0, 0))
+			j++;
+		while (j < ret && pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
+			j++;
+		if (ret > j)
+			ret = j;
+	}
+	return ret;
+}
+
 static void mainloop(void)
 {
 	int step = fb_rows() / PAGESTEPS;
@@ -210,6 +242,12 @@ static void mainloop(void)
 		case 127:
 		case CTRL('u'):
 			head -= fb_rows() * getcount(1) - step;
+			break;
+		case '[':
+			left = leftmost() - hstep / 2;
+			break;
+		case ']':
+			left = rightmost() + hstep / 2 - fb_cols();
 			break;
 		case CTRLKEY('l'):
 			break;
