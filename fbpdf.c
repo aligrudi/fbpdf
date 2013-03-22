@@ -24,6 +24,7 @@
 #define MAXHEIGHT		3
 #define PDFCOLS			(1 << 11)
 #define PDFROWS			(1 << 12)
+#define MAXZOOM			(100)
 
 static struct doc *doc;
 static fbval_t pbuf[PDFROWS * PDFCOLS];	/* current page */
@@ -64,7 +65,7 @@ static int showpage(int p, int h)
 static void zoom_page(int z)
 {
 	int _zoom = zoom;
-	zoom = z;
+	zoom = MIN(MAXZOOM, MAX(1, z));
 	showpage(num, MIN(PDFROWS - fb_rows(), head * zoom / _zoom));
 }
 
@@ -118,7 +119,7 @@ static void reload(void)
 	showpage(num, head);
 }
 
-static int rightmost(void)
+static int rightmost(int cont)
 {
 	int ret = 0;
 	int i, j;
@@ -126,7 +127,8 @@ static int rightmost(void)
 		j = PDFCOLS - 1;
 		while (j > ret && pbuf[i * PDFCOLS + j] == FB_VAL(0, 0, 0))
 			j--;
-		while (j > ret && pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
+		while (cont && j > ret &&
+				pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
 			j--;
 		if (ret < j)
 			ret = j;
@@ -134,7 +136,7 @@ static int rightmost(void)
 	return ret;
 }
 
-static int leftmost(void)
+static int leftmost(int cont)
 {
 	int ret = PDFCOLS;
 	int i, j;
@@ -142,7 +144,8 @@ static int leftmost(void)
 		j = 0;
 		while (j < ret && pbuf[i * PDFCOLS + j] == FB_VAL(0, 0, 0))
 			j++;
-		while (j < ret && pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
+		while (cont && j < ret &&
+				pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
 			j++;
 		if (ret > j)
 			ret = j;
@@ -176,6 +179,11 @@ static void mainloop(void)
 			break;
 		case 'w':
 			zoom_page(zoom * fb_cols() / pcols);
+			break;
+		case 'W':
+			if (leftmost(1) < rightmost(1))
+				zoom_page(zoom * (fb_cols() - hstep) /
+					(rightmost(1) - leftmost(1)));
 			break;
 		case 'f':
 			zoom_page(zoom * fb_rows() / prows);
@@ -233,7 +241,7 @@ static void mainloop(void)
 			head = MAX(0, prows - fb_rows());
 			break;
 		case 'M':
-			head = prows / 2;
+			head = (prows - fb_rows()) / 2;
 			break;
 		case ' ':
 		case CTRL('d'):
@@ -243,11 +251,17 @@ static void mainloop(void)
 		case CTRL('u'):
 			head -= fb_rows() * getcount(1) - step;
 			break;
+		case '{':
+			left = leftmost(0);
+			break;
+		case '}':
+			left = rightmost(0) - fb_cols();
+			break;
 		case '[':
-			left = leftmost() - hstep / 2;
+			left = leftmost(1) - hstep / 2;
 			break;
 		case ']':
-			left = rightmost() + hstep / 2 - fb_cols();
+			left = rightmost(1) + hstep / 2 - fb_cols();
 			break;
 		case CTRLKEY('l'):
 			break;

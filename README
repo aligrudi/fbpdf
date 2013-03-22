@@ -40,6 +40,8 @@ h		scroll left
 l		scroll right
 [		align with the leftmost character on the page
 ]		align with the rightmost character on the page
+{		align with the left edge of the page
+}		align with the right edge of the page
 H		show top
 M		show middle
 L		show bottom
@@ -47,6 +49,7 @@ L		show bottom
 ^H/^U		(backspace) page up
 ^L		redraw
 e		reload current file
-f		fit to height
-w		fit to width
+f		zoom to fit page height
+w		zoom to fit page width
+W		zoom to fit page contents horizontally
 ==============	================================================
