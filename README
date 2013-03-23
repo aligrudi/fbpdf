@@ -38,10 +38,10 @@ j		scroll down
 k		scroll up
 h		scroll left
 l		scroll right
-[		align with the leftmost character on the page
-]		align with the rightmost character on the page
-{		align with the left edge of the page
-}		align with the right edge of the page
+[		align with the left edge of the page
+]		align with the right edge of the page
+{		align with the leftmost character on the page
+}		align with the rightmost character on the page
 H		show top
 M		show middle
 L		show bottom

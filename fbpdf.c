@@ -251,16 +251,16 @@ static void mainloop(void)
 		case CTRL('u'):
 			head -= fb_rows() * getcount(1) - step;
 			break;
-		case '{':
+		case '[':
 			left = leftmost(0);
 			break;
-		case '}':
+		case ']':
 			left = rightmost(0) - fb_cols();
 			break;
-		case '[':
+		case '{':
 			left = leftmost(1) - hstep / 2;
 			break;
-		case ']':
+		case '}':
 			left = rightmost(1) + hstep / 2 - fb_cols();
 			break;
 		case CTRLKEY('l'):
