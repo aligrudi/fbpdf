@@ -20,6 +20,7 @@
 
 #define PAGESTEPS		8
 #define CTRLKEY(x)		((x) - 96)
+#define ISMARK(x)		(isalpha(x) || (x) == '\'' || (x) == '`')
 #define MAXWIDTH		2
 #define MAXHEIGHT		3
 #define PDFCOLS			(1 << 11)
@@ -67,6 +68,26 @@ static void zoom_page(int z)
 	int _zoom = zoom;
 	zoom = MIN(MAXZOOM, MAX(1, z));
 	showpage(num, MIN(PDFROWS - fb_rows(), head * zoom / _zoom));
+}
+
+static void setmark(int c)
+{
+	if (ISMARK(c)) {
+		mark[c] = num;
+		mark_head[c] = head / zoom;
+	}
+}
+
+static void jmpmark(int c, int offset)
+{
+	if (c == '`')
+		c = '\'';
+	if (ISMARK(c) && mark[c]) {
+		int dst = mark[c];
+		int dst_head = offset ? mark_head[c] * zoom : 0;
+		setmark('\'');
+		showpage(dst, dst_head);
+	}
 }
 
 static int readkey(void)
@@ -157,7 +178,7 @@ static void mainloop(void)
 {
 	int step = fb_rows() / PAGESTEPS;
 	int hstep = fb_cols() / PAGESTEPS;
-	int c, c2;
+	int c;
 	term_setup();
 	signal(SIGCONT, sigcont);
 	showpage(num, 0);
@@ -172,6 +193,7 @@ static void mainloop(void)
 			showpage(num - getcount(1), 0);
 			break;
 		case 'G':
+			setmark('\'');
 			showpage(getcount(doc_pages(doc)), 0);
 			break;
 		case 'z':
@@ -202,20 +224,14 @@ static void mainloop(void)
 			count = 0;
 			break;
 		case 'm':
-			c2 = readkey();
-			if (isalpha(c2)) {
-				mark[c2] = num;
-				mark_head[c2] = head / zoom;
-			}
+			setmark(readkey());
 			break;
 		case 'e':
 			reload();
 			break;
 		case '`':
 		case '\'':
-			c2 = readkey();
-			if (isalpha(c2) && mark[c2])
-				showpage(mark[c2], c == '`' ? mark_head[c2] * zoom : 0);
+			jmpmark(readkey(), c == '`');
 			break;
 		default:
 			if (isdigit(c))
