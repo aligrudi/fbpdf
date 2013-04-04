@@ -93,7 +93,7 @@ static void jmpmark(int c, int offset)
 static int readkey(void)
 {
 	unsigned char b;
-	if (read(STDIN_FILENO, &b, 1) <= 0)
+	if (read(0, &b, 1) <= 0)
 		return -1;
 	return b;
 }
@@ -116,16 +116,16 @@ static void printinfo(void)
 static void term_setup(void)
 {
 	struct termios newtermios;
-	tcgetattr(STDIN_FILENO, &termios);
+	tcgetattr(0, &termios);
 	newtermios = termios;
 	newtermios.c_lflag &= ~ICANON;
 	newtermios.c_lflag &= ~ECHO;
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &newtermios);
+	tcsetattr(0, TCSAFLUSH, &newtermios);
 }
 
 static void term_cleanup(void)
 {
-	tcsetattr(STDIN_FILENO, 0, &termios);
+	tcsetattr(0, 0, &termios);
 }
 
 static void sigcont(int sig)
@@ -296,9 +296,6 @@ static char *usage =
 
 int main(int argc, char *argv[])
 {
-	char *hide = "\x1b[?25l";
-	char *show = "\x1b[?25h";
-	char *clear = "\x1b[2J";
 	int i = 1;
 	if (argc < 2) {
 		printf(usage);
@@ -319,9 +316,8 @@ int main(int argc, char *argv[])
 			num = atoi(argv[i + 1]);
 		i += 2;
 	}
-
-	write(STDIN_FILENO, hide, strlen(hide));
-	write(STDOUT_FILENO, clear, strlen(clear));
+	printf("\x1b[?25l");		/* hide the cursor */
+	printf("\x1b[2J");		/* clear the screen */
 	printinfo();
 	if (fb_init())
 		return 1;
@@ -331,8 +327,7 @@ int main(int argc, char *argv[])
 	else
 		mainloop();
 	fb_free();
-	write(STDIN_FILENO, show, strlen(show));
-	printf("\n");
+	printf("\x1b[?25h\n");		/* show the cursor */
 	doc_close(doc);
 	return 0;
 }
