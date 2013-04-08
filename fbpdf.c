@@ -41,6 +41,7 @@ static int rotate;
 static int head;
 static int left;
 static int count;
+static int first;		/* first_page - 1 */
 
 static void draw(void)
 {
@@ -194,7 +195,7 @@ static void mainloop(void)
 			break;
 		case 'G':
 			setmark('\'');
-			showpage(getcount(doc_pages(doc)), 0);
+			showpage(getcount(doc_pages(doc) - first) + first, 0);
 			break;
 		case 'z':
 			zoom_page(getcount(15));
@@ -232,6 +233,9 @@ static void mainloop(void)
 		case '`':
 		case '\'':
 			jmpmark(readkey(), c == '`');
+			break;
+		case 'o':
+			first = getcount(1) - 1;
 			break;
 		default:
 			if (isdigit(c))
@@ -292,7 +296,7 @@ static void mainloop(void)
 }
 
 static char *usage =
-	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] filename\n";
+	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] [-o first page] filename\n";
 
 int main(int argc, char *argv[])
 {
@@ -307,14 +311,21 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "cannot open <%s>\n", filename);
 		return 1;
 	}
-	while (i + 2 < argc && argv[i][0] == '-') {
-		if (argv[i][1] == 'r')
-			rotate = atoi(argv[i + 1]);
-		if (argv[i][1] == 'z')
-			zoom = atoi(argv[i + 1]);
-		if (argv[i][1] == 'p')
-			num = atoi(argv[i + 1]);
-		i += 2;
+	for (i = 1; i < argc && argv[i][0] == '-'; i++) {
+		switch (argv[i][1]) {
+		case 'r':
+			rotate = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
+			break;
+		case 'z':
+			zoom = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
+			break;
+		case 'p':
+			num = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
+			break;
+		case 'o':
+			first = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]) - 1;
+			break;
+		}
 	}
 	printf("\x1b[?25l");		/* hide the cursor */
 	printf("\x1b[2J");		/* clear the screen */

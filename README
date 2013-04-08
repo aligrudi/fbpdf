@@ -10,7 +10,7 @@ can compile it using "make fbpdf".  See the Makefile for other
 targets.  The following options can be specified when starting
 fbpdf (or fbdjvu and fbpdf2):
 
-  fbpdf [-r rotation] [-z zoom x10] [-p page] filename
+  fbpdf [-r rotation] [-z zoom x10] [-p page] [-o first page] filename
 
 KEYS
 ====
@@ -26,6 +26,7 @@ KEY		ACTION
 ^F/J		next page
 ^B/K		previous page
 G		goto page (goto the last page if no prefix)
+o		set first page ('5G' after '3o' goes to page 8)
 z		set zoom multiplied by 10 (i.e. '15z' = 150%)
 r		set rotation in degrees
 i		print info
