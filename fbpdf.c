@@ -31,17 +31,17 @@ static struct doc *doc;
 static fbval_t pbuf[PDFROWS * PDFCOLS];	/* current page */
 static int prows, pcols;		/* the dimensions of current page */
 
-static int num = 1;
 static struct termios termios;
 static char filename[256];
 static int mark[128];		/* mark page number */
 static int mark_head[128];	/* mark head position */
+static int num = 1;		/* page number */
+static int numdiff;		/* G command page number difference */
 static int zoom = 15;
 static int rotate;
 static int head;
 static int left;
 static int count;
-static int first;		/* first_page - 1 */
 
 static void draw(void)
 {
@@ -195,7 +195,7 @@ static void mainloop(void)
 			break;
 		case 'G':
 			setmark('\'');
-			showpage(getcount(doc_pages(doc) - first) + first, 0);
+			showpage(getcount(doc_pages(doc) - numdiff) + numdiff, 0);
 			break;
 		case 'z':
 			zoom_page(getcount(15));
@@ -235,7 +235,7 @@ static void mainloop(void)
 			jmpmark(readkey(), c == '`');
 			break;
 		case 'o':
-			first = getcount(1) - 1;
+			numdiff = num - getcount(num);
 			break;
 		default:
 			if (isdigit(c))
@@ -296,7 +296,7 @@ static void mainloop(void)
 }
 
 static char *usage =
-	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] [-o first page] filename\n";
+	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] filename\n";
 
 int main(int argc, char *argv[])
 {
@@ -321,9 +321,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'p':
 			num = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
-			break;
-		case 'o':
-			first = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]) - 1;
 			break;
 		}
 	}
