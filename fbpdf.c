@@ -237,6 +237,9 @@ static void mainloop(void)
 		case 'o':
 			numdiff = num - getcount(num);
 			break;
+		case 'd':
+			sleep(getcount(1));
+			break;
 		default:
 			if (isdigit(c))
 				count = count * 10 + c - '0';

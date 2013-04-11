@@ -53,4 +53,5 @@ e		reload current file
 f		zoom to fit page height
 w		zoom to fit page width
 W		zoom to fit page contents horizontally
+d		sleep one second before the next command
 ==============	================================================
