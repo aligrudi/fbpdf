@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "fitz.h"
+#include "mupdf/fitz.h"
 #include "draw.h"
 #include "doc.h"
 
@@ -33,7 +33,7 @@ int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 	w = MIN_(*cols, rect.x1 - rect.x0);
 	h = MIN_(*rows, rect.y1 - rect.y0);
 
-	pix = fz_new_pixmap_with_bbox(doc->ctx, fz_device_rgb, &bbox);
+	pix = fz_new_pixmap_with_bbox(doc->ctx, fz_device_rgb(doc->ctx), &bbox);
 	fz_clear_pixmap_with_value(doc->ctx, pix, 0xff);
 
 	dev = fz_new_draw_device(doc->ctx, pix);
