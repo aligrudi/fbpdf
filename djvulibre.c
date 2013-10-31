@@ -26,57 +26,53 @@ int djvu_handle(struct doc *doc)
 	return 0;
 }
 
-static void djvu_render(ddjvu_page_t *page, int mode, void *bitmap, int cols,
-		ddjvu_rect_t *prect, ddjvu_rect_t *rrect)
+static void djvu_render(ddjvu_page_t *page, int iw, int ih, void *bitmap)
 {
 	ddjvu_format_t *fmt;
-	int i = 0;
-	fmt = ddjvu_format_create(DDJVU_FORMAT_GREY8, 0, 0);
+	ddjvu_rect_t rect;
+	rect.x = 0;
+	rect.y = 0;
+	rect.w = iw;
+	rect.h = ih;
+	fmt = ddjvu_format_create(DDJVU_FORMAT_RGB24, 0, 0);
 	ddjvu_format_set_row_order(fmt, 1);
-
-	while (i++ < 2 && !ddjvu_page_render(page, mode, prect,
-						rrect, fmt, cols, bitmap))
-		usleep(100000);
+	memset(bitmap, 0, ih * iw * 3);
+	ddjvu_page_render(page, DDJVU_RENDER_COLOR,
+				&rect, &rect, fmt, iw * 3, bitmap);
 	ddjvu_format_release(fmt);
 }
-
-#define SIZE		(1 << 13)
-static char img[SIZE * SIZE];
 
 int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 		fbval_t *bitmap, int *rows, int *cols)
 {
 	ddjvu_page_t *page;
-	ddjvu_rect_t rect;
 	ddjvu_pageinfo_t info;
-	int w, h;
+	int iw, ih, dpi;
+	unsigned char *bmp;
 	int i, j;
 	page = ddjvu_page_create_by_pageno(doc->doc, p - 1);
 	if (!page)
 		return -1;
-	if (!ddjvu_page_decoding_done(page))
+	while (!ddjvu_page_decoding_done(page))
 		if (djvu_handle(doc))
 			return -1;
 
 	ddjvu_document_get_pageinfo(doc->doc, p - 1, &info);
-	rect.x = 0;
-	rect.y = 0;
-	rect.w = ddjvu_page_get_width(page);
-	rect.h = ddjvu_page_get_height(page);
-
-	/* mode: DDJVU_RENDER_(BLACK|COLOR|BACKGROUND|FOREGROUND) */
-	djvu_render(page, DDJVU_RENDER_FOREGROUND, img, SIZE, &rect, &rect);
+	dpi = ddjvu_page_get_resolution(page);
+	iw = ddjvu_page_get_width(page) * zoom * 10 / dpi;
+	ih = ddjvu_page_get_height(page) * zoom * 10 / dpi;
+	bmp = malloc(ih * iw * 3);
+	djvu_render(page, iw, ih, bmp);
 	ddjvu_page_release(page);
-	zoom /= 4;
-	w = MIN(*cols, rect.w * zoom / 10);
-	h = MIN(*rows, rect.h * zoom / 10);
-	for (i = 0; i < h; i++) {
-		int xs = i * *cols + (*cols - w) / 2;
-		for (j = 0; j < w; j++)
-			bitmap[xs + j] = img[i * 10 / zoom * SIZE + j * 10 / zoom];
+	for (i = 0; i < MIN(*rows, ih); i++) {
+		unsigned char *src = bmp + i * iw * 3;
+		fbval_t *dst = bitmap + i * *cols + (*cols - MIN(*cols, iw)) / 2;
+		for (j = 0; j < MIN(iw, *cols); j++)
+			dst[j] = FB_VAL(src[j * 3], src[j * 3 + 1], src[j * 3 + 2]);
 	}
-	*cols = w;
-	*rows = h;
+	free(bmp);
+	*cols = MIN(*cols, iw);
+	*rows = MIN(*rows, ih);
 	return 0;
 }
 
