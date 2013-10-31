@@ -90,7 +90,7 @@ struct doc *doc_open(char *path)
 	doc->doc = ddjvu_document_create_by_filename(doc->ctx, path, 1);
 	if (!doc->doc)
 		goto fail;
-	if (!ddjvu_document_decoding_done(doc->doc))
+	while (!ddjvu_document_decoding_done(doc->doc))
 		if (djvu_handle(doc))
 			goto fail;
 	return doc;
