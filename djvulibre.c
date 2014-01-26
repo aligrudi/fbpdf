@@ -56,7 +56,8 @@ int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 	while (!ddjvu_page_decoding_done(page))
 		if (djvu_handle(doc))
 			return -1;
-
+	if (rotate)
+		ddjvu_page_set_rotation(page, (4 - (rotate / 90 % 4)) & 3);
 	ddjvu_document_get_pageinfo(doc->doc, p - 1, &info);
 	dpi = ddjvu_page_get_resolution(page);
 	iw = ddjvu_page_get_width(page) * zoom * 10 / dpi;
