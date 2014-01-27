@@ -27,7 +27,7 @@ KEY		ACTION
 ^B/K		previous page
 G		go to page (the last page if no prefix)
 o		set current page number (for 'G' command only)
-z		set zoom multiplied by 10 (i.e. '15z' = 150%)
+z		zoom; prefix multiplied by 10 (i.e. '15z' = 150%)
 r		set rotation in degrees
 i		print info
 q		quit
@@ -53,5 +53,6 @@ e		reload current file
 f		zoom to fit page height
 w		zoom to fit page width
 W		zoom to fit page contents horizontally
+Z		the default zoom level for 'z' command
 d		sleep one second before the next command
 ==============	================================================

@@ -1,7 +1,7 @@
 /*
  * fbpdf - a small framebuffer pdf viewer using mupdf
  *
- * Copyright (C) 2009-2013 Ali Gholami Rudi <ali at rudi dot ir>
+ * Copyright (C) 2009-2014 Ali Gholami Rudi <ali at rudi dot ir>
  *
  * This program is released under the Modified BSD license.
  */
@@ -38,6 +38,7 @@ static int mark_head[128];	/* mark head position */
 static int num = 1;		/* page number */
 static int numdiff;		/* G command page number difference */
 static int zoom = 15;
+static int zoom_def = 15;	/* default zoom */
 static int rotate;
 static int head;
 static int left;
@@ -198,7 +199,10 @@ static void mainloop(void)
 			showpage(getcount(doc_pages(doc) - numdiff) + numdiff, 0);
 			break;
 		case 'z':
-			zoom_page(getcount(15));
+			zoom_page(getcount(zoom_def));
+			break;
+		case 'Z':
+			zoom_def = getcount(zoom);
 			break;
 		case 'w':
 			zoom_page(zoom * fb_cols() / pcols);
