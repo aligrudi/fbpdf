@@ -6,6 +6,7 @@
 #include <poppler/cpp/poppler-page-renderer.h>
 
 extern "C" {
+#include "draw.h"
 #include "doc.h"
 }
 
