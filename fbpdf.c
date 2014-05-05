@@ -198,6 +198,14 @@ static void mainloop(void)
 			setmark('\'');
 			showpage(getcount(doc_pages(doc) - numdiff) + numdiff, 0);
 			break;
+		case 'O':
+			numdiff = num - getcount(num);
+			setmark('\'');
+			showpage(num + numdiff, 0);
+			break;
+		case 'o':
+			numdiff = num - getcount(num);
+			break;
 		case 'z':
 			zoom_page(getcount(zoom_def));
 			break;
@@ -237,9 +245,6 @@ static void mainloop(void)
 		case '`':
 		case '\'':
 			jmpmark(readkey(), c == '`');
-			break;
-		case 'o':
-			numdiff = num - getcount(num);
 			break;
 		case 'd':
 			sleep(getcount(1));

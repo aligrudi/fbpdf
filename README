@@ -26,7 +26,8 @@ KEY		ACTION
 ^F/J		next page
 ^B/K		previous page
 G		go to page (the last page if no prefix)
-o		set current page number (for 'G' command only)
+o		set page number (for 'G' command only)
+O		set page number and go to current page
 z		zoom; prefix multiplied by 10 (i.e. '15z' = 150%)
 r		set rotation in degrees
 i		print info
