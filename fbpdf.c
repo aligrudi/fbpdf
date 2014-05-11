@@ -275,6 +275,9 @@ static void mainloop(void)
 		case 'M':
 			head = (prows - fb_rows()) / 2;
 			break;
+		case 'C':
+			left = (PDFCOLS - fb_cols()) / 2;
+			break;
 		case ' ':
 		case CTRL('d'):
 			head += fb_rows() * getcount(1) - step;

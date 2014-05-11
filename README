@@ -44,9 +44,10 @@ l		scroll right
 ]		align with the right edge of the page
 {		align with the leftmost character on the page
 }		align with the rightmost character on the page
-H		show top
-M		show middle
-L		show bottom
+H		show page top
+M		center the page vertically
+L		show page bottom
+C		center the page horizontally
 ' '/^D		(space) page down
 ^H/^U		(backspace) page up
 ^L		redraw
