@@ -110,7 +110,7 @@ static int getcount(int def)
 static void printinfo(void)
 {
 	printf("\x1b[H");
-	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K",
+	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K\r",
 		filename, num, doc_pages(doc), zoom * 10);
 	fflush(stdout);
 }
@@ -123,11 +123,15 @@ static void term_setup(void)
 	newtermios.c_lflag &= ~ICANON;
 	newtermios.c_lflag &= ~ECHO;
 	tcsetattr(0, TCSAFLUSH, &newtermios);
+	printf("\x1b[?25l");		/* hide the cursor */
+	printf("\x1b[2J");		/* clear the screen */
+	fflush(stdout);
 }
 
 static void term_cleanup(void)
 {
 	tcsetattr(0, 0, &termios);
+	printf("\x1b[?25h\n");		/* show the cursor */
 }
 
 static void sigcont(int sig)
@@ -135,11 +139,16 @@ static void sigcont(int sig)
 	term_setup();
 }
 
-static void reload(void)
+static int reload(void)
 {
 	doc_close(doc);
 	doc = doc_open(filename);
+	if (!doc) {
+		fprintf(stderr, "\nfbpdf: cannot open <%s>\n", filename);
+		return 1;
+	}
 	showpage(num, head);
+	return 0;
 }
 
 static int rightmost(int cont)
@@ -185,6 +194,10 @@ static void mainloop(void)
 	signal(SIGCONT, sigcont);
 	showpage(num, 0);
 	while ((c = readkey()) != -1) {
+		if (c == 'q')
+			break;
+		if (c == 'e' && reload())
+			break;
 		switch (c) {
 		case CTRLKEY('f'):
 		case 'J':
@@ -230,17 +243,11 @@ static void mainloop(void)
 		case 'i':
 			printinfo();
 			break;
-		case 'q':
-			term_cleanup();
-			return;
 		case 27:
 			count = 0;
 			break;
 		case 'm':
 			setmark(readkey());
-			break;
-		case 'e':
-			reload();
 			break;
 		case '`':
 		case '\'':
@@ -308,6 +315,7 @@ static void mainloop(void)
 		left = MAX(0, MIN(PDFCOLS - fb_cols(), left));
 		draw();
 	}
+	term_cleanup();
 }
 
 static char *usage =
@@ -323,7 +331,7 @@ int main(int argc, char *argv[])
 	strcpy(filename, argv[argc - 1]);
 	doc = doc_open(filename);
 	if (!doc) {
-		fprintf(stderr, "cannot open <%s>\n", filename);
+		fprintf(stderr, "fbpdf: cannot open <%s>\n", filename);
 		return 1;
 	}
 	for (i = 1; i < argc && argv[i][0] == '-'; i++) {
@@ -339,8 +347,6 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-	printf("\x1b[?25l");		/* hide the cursor */
-	printf("\x1b[2J");		/* clear the screen */
 	printinfo();
 	if (fb_init())
 		return 1;
@@ -350,7 +356,7 @@ int main(int argc, char *argv[])
 	else
 		mainloop();
 	fb_free();
-	printf("\x1b[?25h\n");		/* show the cursor */
-	doc_close(doc);
+	if (doc)
+		doc_close(doc);
 	return 0;
 }
