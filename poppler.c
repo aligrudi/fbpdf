@@ -5,6 +5,8 @@
 #include <poppler/cpp/poppler-page.h>
 #include <poppler/cpp/poppler-page-renderer.h>
 
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
+
 extern "C" {
 #include "draw.h"
 #include "doc.h"
@@ -37,8 +39,8 @@ int doc_draw(struct doc *doc, int p, int zoom, int rotate,
 	pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
 	poppler::image img = pr.render_page(page, 72 * zoom / 10, 72 * zoom / 10,
 				-1, -1, -1, -1, rotation((rotate + 89) / 90));
-	h = img.height();
-	w = img.width();
+	h = MIN(*rows, img.height());
+	w = MIN(*cols, img.width());
 	dat = (unsigned char *) img.data();
 	for (y = 0; y < h; y++) {
 		int xs = y * *cols + (*cols - w) / 2;
