@@ -143,7 +143,7 @@ static int reload(void)
 {
 	doc_close(doc);
 	doc = doc_open(filename);
-	if (!doc) {
+	if (!doc || !doc_pages(doc)) {
 		fprintf(stderr, "\nfbpdf: cannot open <%s>\n", filename);
 		return 1;
 	}
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 	}
 	strcpy(filename, argv[argc - 1]);
 	doc = doc_open(filename);
-	if (!doc) {
+	if (!doc || !doc_pages(doc)) {
 		fprintf(stderr, "fbpdf: cannot open <%s>\n", filename);
 		return 1;
 	}
