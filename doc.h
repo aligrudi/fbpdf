@@ -6,6 +6,5 @@ typedef unsigned int fbval_t;
 
 struct doc *doc_open(char *path);
 int doc_pages(struct doc *doc);
-int doc_draw(struct doc *doc, int page, int zoom, int rotate,
-		fbval_t *bitmap, int *rows, int *cols);
+void *doc_draw(struct doc *doc, int page, int zoom, int rotate, int *rows, int *cols);
 void doc_close(struct doc *doc);

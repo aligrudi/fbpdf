@@ -42,39 +42,46 @@ static void djvu_render(ddjvu_page_t *page, int iw, int ih, void *bitmap)
 	ddjvu_format_release(fmt);
 }
 
-int doc_draw(struct doc *doc, int p, int zoom, int rotate,
-		fbval_t *bitmap, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
 {
 	ddjvu_page_t *page;
 	ddjvu_pageinfo_t info;
 	int iw, ih, dpi;
 	unsigned char *bmp;
+	fbval_t *pbuf;
 	int i, j;
 	page = ddjvu_page_create_by_pageno(doc->doc, p - 1);
 	if (!page)
-		return -1;
+		return NULL;
 	while (!ddjvu_page_decoding_done(page))
 		if (djvu_handle(doc))
-			return -1;
+			return NULL;
 	if (rotate)
 		ddjvu_page_set_rotation(page, (4 - (rotate / 90 % 4)) & 3);
 	ddjvu_document_get_pageinfo(doc->doc, p - 1, &info);
 	dpi = ddjvu_page_get_resolution(page);
 	iw = ddjvu_page_get_width(page) * zoom * 10 / dpi;
 	ih = ddjvu_page_get_height(page) * zoom * 10 / dpi;
-	bmp = malloc(ih * iw * 3);
+	if (!(bmp = malloc(ih * iw * 3))) {
+		ddjvu_page_release(page);
+		return NULL;
+	}
 	djvu_render(page, iw, ih, bmp);
 	ddjvu_page_release(page);
-	for (i = 0; i < MIN(*rows, ih); i++) {
+	if (!(pbuf = malloc(ih * iw * sizeof(pbuf[0])))) {
+		free(bmp);
+		return NULL;
+	}
+	for (i = 0; i < ih; i++) {
 		unsigned char *src = bmp + i * iw * 3;
-		fbval_t *dst = bitmap + i * *cols + (*cols - MIN(*cols, iw)) / 2;
-		for (j = 0; j < MIN(iw, *cols); j++)
+		fbval_t *dst = pbuf + i * iw;
+		for (j = 0; j < iw; j++)
 			dst[j] = FB_VAL(src[j * 3], src[j * 3 + 1], src[j * 3 + 2]);
 	}
 	free(bmp);
-	*cols = MIN(*cols, iw);
-	*rows = MIN(*rows, ih);
-	return 0;
+	*cols = iw;
+	*rows = ih;
+	return pbuf;
 }
 
 int doc_pages(struct doc *doc)

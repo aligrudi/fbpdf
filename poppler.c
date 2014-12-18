@@ -27,32 +27,35 @@ static poppler::rotation_enum rotation(int times)
 	return poppler::rotate_0;
 }
 
-int doc_draw(struct doc *doc, int p, int zoom, int rotate,
-		fbval_t *bitmap, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
 {
 	poppler::page *page = doc->doc->create_page(p - 1);
 	poppler::page_renderer pr;
 	int x, y;
 	int h, w;
+	fbval_t *pbuf;
 	unsigned char *dat;
 	pr.set_render_hint(poppler::page_renderer::antialiasing, true);
 	pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
 	poppler::image img = pr.render_page(page, 72 * zoom / 10, 72 * zoom / 10,
 				-1, -1, -1, -1, rotation((rotate + 89) / 90));
-	h = MIN(*rows, img.height());
-	w = MIN(*cols, img.width());
+	h = img.height();
+	w = img.width();
 	dat = (unsigned char *) img.data();
+	if (!(pbuf = (fbval_t *) malloc(h * w * sizeof(pbuf[0])))) {
+		delete page;
+		return NULL;
+	}
 	for (y = 0; y < h; y++) {
-		int xs = y * *cols + (*cols - w) / 2;
-		for (x = 0; x < w; x++) {
-			unsigned char *s = dat + img.bytes_per_row() * y + x * 4;
-			bitmap[xs + x] = FB_VAL(s[2], s[1], s[0]);
-		}
+		unsigned char *s = dat + img.bytes_per_row() * y;
+		for (x = 0; x < w; x++)
+			pbuf[y * w + x] = FB_VAL(s[x * 4 + 2],
+					s[x * 4 + 1], s[x * 4 + 0]);
 	}
 	*rows = h;
 	*cols = w;
 	delete page;
-	return 0;
+	return pbuf;
 }
 
 int doc_pages(struct doc *doc)

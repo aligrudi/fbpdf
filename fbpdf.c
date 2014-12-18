@@ -18,50 +18,58 @@
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 
-#define PAGESTEPS		8
-#define CTRLKEY(x)		((x) - 96)
-#define ISMARK(x)		(isalpha(x) || (x) == '\'' || (x) == '`')
-#define MAXWIDTH		2
-#define MAXHEIGHT		3
-#define PDFCOLS			(1 << 11)
-#define PDFROWS			(1 << 12)
-#define MAXZOOM			(100)
+#define PAGESTEPS	8
+#define MAXZOOM		100
+#define MARGIN		1
+#define CTRLKEY(x)	((x) - 96)
+#define ISMARK(x)	(isalpha(x) || (x) == '\'' || (x) == '`')
 
 static struct doc *doc;
-static fbval_t pbuf[PDFROWS * PDFCOLS];	/* current page */
-static int prows, pcols;		/* the dimensions of current page */
+static fbval_t *pbuf;		/* current page */
+static int srows, scols;	/* screen dimentions */
+static int prows, pcols;	/* current page dimensions */
+static int prow, pcol;		/* page position */
+static int srow, scol;		/* screen position */
 
 static struct termios termios;
 static char filename[256];
 static int mark[128];		/* mark page number */
-static int mark_head[128];	/* mark head position */
+static int mark_row[128];	/* mark head position */
 static int num = 1;		/* page number */
 static int numdiff;		/* G command page number difference */
 static int zoom = 15;
 static int zoom_def = 15;	/* default zoom */
 static int rotate;
-static int head;
-static int left;
 static int count;
 
 static void draw(void)
 {
 	int i;
-	for (i = head; i < MIN(head + fb_rows(), PDFROWS); i++)
-		fb_set(i - head, 0, pbuf + i * PDFCOLS + left, fb_cols());
+	fbval_t *rbuf = malloc(scols * sizeof(rbuf[0]));
+	for (i = srow; i < srow + srows; i++) {
+		int cbeg = MAX(scol, pcol);
+		int cend = MIN(scol + scols, pcol + pcols);
+		memset(rbuf, 0, scols * sizeof(rbuf[0]));
+		if (i >= prow && i < prow + prows && cbeg < cend) {
+			memcpy(rbuf + cbeg - scol,
+				pbuf + (i - prow) * pcols + cbeg - pcol,
+				(cend - cbeg) * sizeof(rbuf[0]));
+		}
+		fb_set(i - srow, 0, rbuf, scols);
+	}
+	free(rbuf);
 }
 
-static int showpage(int p, int h)
+static int loadpage(int p)
 {
 	if (p < 1 || p > doc_pages(doc))
 		return 0;
-	memset(pbuf, 0x00, sizeof(pbuf));
-	prows = PDFROWS;
-	pcols = PDFCOLS;
-	doc_draw(doc, p, zoom, rotate, pbuf, &prows, &pcols);
+	free(pbuf);
+	prows = 0;
+	pbuf = doc_draw(doc, p, zoom, rotate, &prows, &pcols);
+	prow = -prows / 2;
+	pcol = -pcols / 2;
 	num = p;
-	head = h;
-	draw();
 	return 0;
 }
 
@@ -69,14 +77,15 @@ static void zoom_page(int z)
 {
 	int _zoom = zoom;
 	zoom = MIN(MAXZOOM, MAX(1, z));
-	showpage(num, MIN(PDFROWS - fb_rows(), head * zoom / _zoom));
+	loadpage(num);
+	srow = srow * zoom / _zoom;
 }
 
 static void setmark(int c)
 {
 	if (ISMARK(c)) {
 		mark[c] = num;
-		mark_head[c] = head / zoom;
+		mark_row[c] = srow / zoom;
 	}
 }
 
@@ -85,10 +94,9 @@ static void jmpmark(int c, int offset)
 	if (c == '`')
 		c = '\'';
 	if (ISMARK(c) && mark[c]) {
-		int dst = mark[c];
-		int dst_head = offset ? mark_head[c] * zoom : 0;
 		setmark('\'');
-		showpage(dst, dst_head);
+		loadpage(mark[c]);
+		srow = offset ? mark_row[c] * zoom : 0;
 	}
 }
 
@@ -141,26 +149,26 @@ static void sigcont(int sig)
 
 static int reload(void)
 {
+	free(pbuf);
+	pbuf = NULL;
 	doc_close(doc);
 	doc = doc_open(filename);
 	if (!doc || !doc_pages(doc)) {
 		fprintf(stderr, "\nfbpdf: cannot open <%s>\n", filename);
 		return 1;
 	}
-	showpage(num, head);
+	loadpage(num);
+	draw();
 	return 0;
 }
 
-static int rightmost(int cont)
+static int rmargin(void)
 {
 	int ret = 0;
 	int i, j;
 	for (i = 0; i < prows; i++) {
-		j = PDFCOLS - 1;
-		while (j > ret && pbuf[i * PDFCOLS + j] == FB_VAL(0, 0, 0))
-			j--;
-		while (cont && j > ret &&
-				pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
+		j = pcols - 1;
+		while (j > ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
 			j--;
 		if (ret < j)
 			ret = j;
@@ -168,16 +176,13 @@ static int rightmost(int cont)
 	return ret;
 }
 
-static int leftmost(int cont)
+static int lmargin(void)
 {
-	int ret = PDFCOLS;
+	int ret = pcols;
 	int i, j;
 	for (i = 0; i < prows; i++) {
 		j = 0;
-		while (j < ret && pbuf[i * PDFCOLS + j] == FB_VAL(0, 0, 0))
-			j++;
-		while (cont && j < ret &&
-				pbuf[i * PDFCOLS + j] == FB_VAL(255, 255, 255))
+		while (j < ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
 			j++;
 		if (ret > j)
 			ret = j;
@@ -187,58 +192,26 @@ static int leftmost(int cont)
 
 static void mainloop(void)
 {
-	int step = fb_rows() / PAGESTEPS;
-	int hstep = fb_cols() / PAGESTEPS;
+	int step = srows / PAGESTEPS;
+	int hstep = scols / PAGESTEPS;
 	int c;
 	term_setup();
 	signal(SIGCONT, sigcont);
-	showpage(num, 0);
+	loadpage(num);
+	srow = prow;
+	scol = -scols / 2;
+	draw();
 	while ((c = readkey()) != -1) {
 		if (c == 'q')
 			break;
 		if (c == 'e' && reload())
 			break;
-		switch (c) {
-		case CTRLKEY('f'):
-		case 'J':
-			showpage(num + getcount(1), 0);
-			break;
-		case CTRLKEY('b'):
-		case 'K':
-			showpage(num - getcount(1), 0);
-			break;
-		case 'G':
-			setmark('\'');
-			showpage(getcount(doc_pages(doc) - numdiff) + numdiff, 0);
-			break;
-		case 'O':
-			numdiff = num - getcount(num);
-			setmark('\'');
-			showpage(num + numdiff, 0);
-			break;
+		switch (c) {	/* commands that do not require redrawing */
 		case 'o':
 			numdiff = num - getcount(num);
 			break;
-		case 'z':
-			zoom_page(getcount(zoom_def));
-			break;
 		case 'Z':
 			zoom_def = getcount(zoom);
-			break;
-		case 'w':
-			zoom_page(zoom * fb_cols() / pcols);
-			break;
-		case 'W':
-			if (leftmost(1) < rightmost(1))
-				zoom_page(zoom * (fb_cols() - hstep) /
-					(rightmost(1) - leftmost(1)));
-			break;
-		case 'f':
-			zoom_page(zoom * fb_rows() / prows);
-			break;
-		case 'r':
-			rotate = getcount(0);
-			showpage(num, 0);
 			break;
 		case 'i':
 			printinfo();
@@ -249,10 +222,6 @@ static void mainloop(void)
 		case 'm':
 			setmark(readkey());
 			break;
-		case '`':
-		case '\'':
-			jmpmark(readkey(), c == '`');
-			break;
 		case 'd':
 			sleep(getcount(1));
 			break;
@@ -260,59 +229,102 @@ static void mainloop(void)
 			if (isdigit(c))
 				count = count * 10 + c - '0';
 		}
-		switch (c) {
+		switch (c) {	/* commands that require redrawing */
+		case CTRLKEY('f'):
+		case 'J':
+			loadpage(num + getcount(1));
+			srow = prow;
+			break;
+		case CTRLKEY('b'):
+		case 'K':
+			loadpage(num - getcount(1));
+			srow = prow;
+			break;
+		case 'G':
+			setmark('\'');
+			loadpage(getcount(doc_pages(doc) - numdiff) + numdiff);
+			srow = prow;
+			break;
+		case 'O':
+			numdiff = num - getcount(num);
+			setmark('\'');
+			loadpage(num + numdiff);
+			srow = prow;
+			break;
+		case 'z':
+			zoom_page(getcount(zoom_def));
+			break;
+		case 'w':
+			zoom_page(pcols ? zoom * scols / pcols : zoom);
+			break;
+		case 'W':
+			if (lmargin() < rmargin())
+				zoom_page(zoom * (scols - hstep) /
+					(rmargin() - lmargin()));
+			break;
+		case 'f':
+			zoom_page(prows ? zoom * srows / prows : zoom);
+			break;
+		case 'r':
+			rotate = getcount(0);
+			loadpage(num);
+			srow = prow;
+			break;
+		case '`':
+		case '\'':
+			jmpmark(readkey(), c == '`');
+			break;
 		case 'j':
-			head += step * getcount(1);
+			srow += step * getcount(1);
 			break;
 		case 'k':
-			head -= step * getcount(1);
+			srow -= step * getcount(1);
 			break;
 		case 'l':
-			left += hstep * getcount(1);
+			scol += hstep * getcount(1);
 			break;
 		case 'h':
-			left -= hstep * getcount(1);
+			scol -= hstep * getcount(1);
 			break;
 		case 'H':
-			head = 0;
+			srow = prow;
 			break;
 		case 'L':
-			head = MAX(0, prows - fb_rows());
+			srow = prow + prows - srows;
 			break;
 		case 'M':
-			head = (prows - fb_rows()) / 2;
+			srow = prow + prows / 2 - srows / 2;
 			break;
 		case 'C':
-			left = (PDFCOLS - fb_cols()) / 2;
+			scol = -scols / 2;
 			break;
 		case ' ':
 		case CTRL('d'):
-			head += fb_rows() * getcount(1) - step;
+			srow += srows * getcount(1) - step;
 			break;
 		case 127:
 		case CTRL('u'):
-			head -= fb_rows() * getcount(1) - step;
+			srow -= srows * getcount(1) - step;
 			break;
 		case '[':
-			left = leftmost(0);
+			scol = pcol;
 			break;
 		case ']':
-			left = rightmost(0) - fb_cols();
+			scol = pcol + pcols - scols;
 			break;
 		case '{':
-			left = leftmost(1) - hstep / 2;
+			scol = pcol + lmargin() - hstep / 2;
 			break;
 		case '}':
-			left = rightmost(1) + hstep / 2 - fb_cols();
+			scol = pcol + rmargin() + hstep / 2 - scols;
 			break;
 		case CTRLKEY('l'):
 			break;
-		default:
-			/* no need to redraw */
+		default:	/* no need to redraw */
 			continue;
 		}
-		head = MAX(0, MIN(PDFROWS - fb_rows(), head));
-		left = MAX(0, MIN(PDFCOLS - fb_cols(), left));
+		srow = MAX(prow - srows + MARGIN, MIN(prow + prows - MARGIN, srow));
+		scol = MAX(pcol - scols + MARGIN, MIN(pcol + pcols - MARGIN, scol));
 		draw();
 	}
 	term_cleanup();
@@ -350,12 +362,14 @@ int main(int argc, char *argv[])
 	printinfo();
 	if (fb_init())
 		return 1;
-	left = (PDFCOLS - fb_cols()) / 2;
+	srows = fb_rows();
+	scols = fb_cols();
 	if (FBM_BPP(fb_mode()) != sizeof(fbval_t))
 		fprintf(stderr, "fbpdf: fbval_t doesn't match fb depth\n");
 	else
 		mainloop();
 	fb_free();
+	free(pbuf);
 	if (doc)
 		doc_close(doc);
 	return 0;
