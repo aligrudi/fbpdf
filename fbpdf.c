@@ -94,9 +94,11 @@ static void jmpmark(int c, int offset)
 	if (c == '`')
 		c = '\'';
 	if (ISMARK(c) && mark[c]) {
+		int dst = mark[c];
+		int dst_row = offset ? mark_row[c] * zoom : 0;
 		setmark('\'');
-		loadpage(mark[c]);
-		srow = offset ? mark_row[c] * zoom : 0;
+		loadpage(dst);
+		srow = offset ? dst_row : prow;
 	}
 }
 
