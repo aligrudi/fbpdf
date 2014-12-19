@@ -63,7 +63,7 @@ static void draw(void)
 static int loadpage(int p)
 {
 	if (p < 1 || p > doc_pages(doc))
-		return 0;
+		return 1;
 	prows = 0;
 	free(pbuf);
 	pbuf = doc_draw(doc, p, zoom, rotate, &prows, &pcols);
@@ -77,8 +77,8 @@ static void zoom_page(int z)
 {
 	int _zoom = zoom;
 	zoom = MIN(MAXZOOM, MAX(1, z));
-	loadpage(num);
-	srow = srow * zoom / _zoom;
+	if (!loadpage(num))
+		srow = srow * zoom / _zoom;
 }
 
 static void setmark(int c)
@@ -97,8 +97,8 @@ static void jmpmark(int c, int offset)
 		int dst = mark[c];
 		int dst_row = offset ? mark_row[c] * zoom : 0;
 		setmark('\'');
-		loadpage(dst);
-		srow = offset ? dst_row : prow;
+		if (!loadpage(dst))
+			srow = offset ? dst_row : prow;
 	}
 }
 
@@ -157,8 +157,8 @@ static int reload(void)
 		fprintf(stderr, "\nfbpdf: cannot open <%s>\n", filename);
 		return 1;
 	}
-	loadpage(num);
-	draw();
+	if (!loadpage(num))
+		draw();
 	return 0;
 }
 
@@ -232,24 +232,24 @@ static void mainloop(void)
 		switch (c) {	/* commands that require redrawing */
 		case CTRLKEY('f'):
 		case 'J':
-			loadpage(num + getcount(1));
-			srow = prow;
+			if (!loadpage(num + getcount(1)))
+				srow = prow;
 			break;
 		case CTRLKEY('b'):
 		case 'K':
-			loadpage(num - getcount(1));
-			srow = prow;
+			if (!loadpage(num - getcount(1)))
+				srow = prow;
 			break;
 		case 'G':
 			setmark('\'');
-			loadpage(getcount(doc_pages(doc) - numdiff) + numdiff);
-			srow = prow;
+			if (!loadpage(getcount(doc_pages(doc) - numdiff) + numdiff))
+				srow = prow;
 			break;
 		case 'O':
 			numdiff = num - getcount(num);
 			setmark('\'');
-			loadpage(num + numdiff);
-			srow = prow;
+			if (!loadpage(num + numdiff))
+				srow = prow;
 			break;
 		case 'z':
 			zoom_page(getcount(zoom_def));
@@ -267,8 +267,8 @@ static void mainloop(void)
 			break;
 		case 'r':
 			rotate = getcount(0);
-			loadpage(num);
-			srow = prow;
+			if (!loadpage(num))
+				srow = prow;
 			break;
 		case '`':
 		case '\'':
