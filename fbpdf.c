@@ -64,8 +64,8 @@ static int loadpage(int p)
 {
 	if (p < 1 || p > doc_pages(doc))
 		return 0;
-	free(pbuf);
 	prows = 0;
+	free(pbuf);
 	pbuf = doc_draw(doc, p, zoom, rotate, &prows, &pcols);
 	prow = -prows / 2;
 	pcol = -pcols / 2;
@@ -151,8 +151,6 @@ static void sigcont(int sig)
 
 static int reload(void)
 {
-	free(pbuf);
-	pbuf = NULL;
 	doc_close(doc);
 	doc = doc_open(filename);
 	if (!doc || !doc_pages(doc)) {
