@@ -23,11 +23,11 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 	int h, w;
 	int x, y;
 
-	if (!(page = fz_load_page(doc->pdf, p - 1)))
+	if (!(page = fz_load_page(doc->ctx, doc->pdf, p - 1)))
 		return NULL;
 	fz_rotate(&ctm, rotate);
 	fz_pre_scale(&ctm, (float) zoom / 10, (float) zoom / 10);
-	fz_bound_page(doc->pdf, page, &rect);
+	fz_bound_page(doc->ctx, page, &rect);
 	fz_transform_rect(&rect, &ctm);
 	fz_round_rect(&bbox, &rect);
 	w = rect.x1 - rect.x0;
@@ -37,12 +37,12 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 	fz_clear_pixmap_with_value(doc->ctx, pix, 0xff);
 
 	dev = fz_new_draw_device(doc->ctx, pix);
-	fz_run_page(doc->pdf, page, dev, &ctm, NULL);
-	fz_free_device(dev);
+	fz_run_page(doc->ctx, page, dev, &ctm, NULL);
+	fz_drop_device(doc->ctx, dev);
 
 	if (!(pbuf = malloc(w * h * sizeof(pbuf[0])))) {
 		fz_drop_pixmap(doc->ctx, pix);
-		fz_free_page(doc->pdf, page);
+		fz_drop_page(doc->ctx, page);
 		return NULL;
 	}
 	for (y = 0; y < h; y++) {
@@ -53,7 +53,7 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 					s[x * 4 + 1], s[x * 4 + 2]);
 	}
 	fz_drop_pixmap(doc->ctx, pix);
-	fz_free_page(doc->pdf, page);
+	fz_drop_page(doc->ctx, page);
 	*cols = w;
 	*rows = h;
 	return pbuf;
@@ -61,7 +61,7 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 
 int doc_pages(struct doc *doc)
 {
-	return fz_count_pages(doc->pdf);
+	return fz_count_pages(doc->ctx, doc->pdf);
 }
 
 struct doc *doc_open(char *path)
@@ -72,7 +72,7 @@ struct doc *doc_open(char *path)
 	fz_try (doc->ctx) {
 		doc->pdf = fz_open_document(doc->ctx, path);
 	} fz_catch (doc->ctx) {
-		fz_free_context(doc->ctx);
+		fz_drop_context(doc->ctx);
 		free(doc);
 		return NULL;
 	}
@@ -81,7 +81,7 @@ struct doc *doc_open(char *path)
 
 void doc_close(struct doc *doc)
 {
-	fz_close_document(doc->pdf);
-	fz_free_context(doc->ctx);
+	fz_drop_document(doc->ctx, doc->pdf);
+	fz_drop_context(doc->ctx);
 	free(doc);
 }
