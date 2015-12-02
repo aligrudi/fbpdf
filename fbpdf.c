@@ -1,7 +1,7 @@
 /*
  * fbpdf - a small framebuffer pdf viewer using mupdf
  *
- * Copyright (C) 2009-2014 Ali Gholami Rudi <ali at rudi dot ir>
+ * Copyright (C) 2009-2015 Ali Gholami Rudi <ali at rudi dot ir>
  *
  * This program is released under the Modified BSD license.
  */
@@ -299,11 +299,11 @@ static void mainloop(void)
 			scol = -scols / 2;
 			break;
 		case ' ':
-		case CTRL('d'):
+		case CTRLKEY('d'):
 			srow += srows * getcount(1) - step;
 			break;
 		case 127:
-		case CTRL('u'):
+		case CTRLKEY('u'):
 			srow -= srows * getcount(1) - step;
 			break;
 		case '[':
