@@ -11,8 +11,8 @@ clean:
 
 # pdf support using mupdf
 fbpdf: fbpdf.o mupdf.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lmujs -lfreetype \
-			-ljbig2dec -ljpeg -lz -lopenjpeg -lm -lcrypto
+	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lmupdfthird -lcrypto -lm
+
 # djvu support
 fbdjvu: fbpdf.o djvulibre.o draw.o
 	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++ -lpthread
