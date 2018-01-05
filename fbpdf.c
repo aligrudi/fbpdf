@@ -51,6 +51,7 @@ static int zoom = 15;
 static int zoom_def = 15;	/* default zoom */
 static int rotate;
 static int count;
+static int invert;		/* invert colors? */
 
 static void draw(void)
 {
@@ -72,11 +73,16 @@ static void draw(void)
 
 static int loadpage(int p)
 {
+	int i;
 	if (p < 1 || p > doc_pages(doc))
 		return 1;
 	prows = 0;
 	free(pbuf);
 	pbuf = doc_draw(doc, p, zoom, rotate, &prows, &pcols);
+	if (invert) {
+		for (i = 0; i < prows * pcols; i++)
+			pbuf[i] = pbuf[i] ^ 0xffffffff;
+	}
 	prow = -prows / 2;
 	pcol = -pcols / 2;
 	num = p;
@@ -329,6 +335,10 @@ static void mainloop(void)
 			scol = pcol + rmargin() + hstep / 2 - scols;
 			break;
 		case CTRLKEY('l'):
+			break;
+		case 'I':
+			invert = !invert;
+			loadpage(num);
 			break;
 		default:	/* no need to redraw */
 			continue;

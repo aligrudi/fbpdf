@@ -24,6 +24,7 @@ O		set page number and go to current page
 z		zoom; prefix multiplied by 10 (i.e. '15z' = 150%)
 r		set rotation in degrees
 i		print some information
+I		invert colors
 q		quit
 ^[/escape 	clear the numerical prefix
 mx		mark page as 'x' (or any other letter)
