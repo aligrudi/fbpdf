@@ -1,0 +1,69 @@
+.TH "fbpdf" 1       "2018\-01\-05" ""     "General Commands Manual"
+.SH NAME
+.B fbpdf
+\- view PDF files on the frame buffer
+.SH SYNOPSIS
+.PP
+.B fbpdf
+[\fB\-r\fR \fIrotation\fR]
+[\fB\-z\fR \fIzoom_x10\fR]
+[\fB\-p\fR \fIpage_number\fR]
+.I file.pdf
+.SH OPTIONS
+.PP
+\fB\-r\fR \fIrotation\fR	Set rotation to \fIrotation\fR degrees.
+.br
+\fB\-z\fR \fIzoom_x10\fR	Set zoom to ten times \fIzoom_x10\fR percent.
+.br
+\fB\-p\fR \fIpage_number\fR	Open \fIfile.pdf\fR to page \fIpage_number\fR.
+.SH DESCRIPTION
+.PP
+.B fbpdf
+is a framebuffer PDF and djvu viewer.  The following table lists the
+key-bindings available in \fBfbpdf\fR.  Most of them accept a numerical prefix;
+for instance, \fB^F\fR tells \fBfbpdf\fR to show the next page while \fB5^F\fR
+tells it to show the fifth next page.
+.TS
+aB aB
+_ s
+a a .
+Key	Action
+^F/J	next page
+^B/K	previous page
+G	go to page (the last page if no prefix)
+o	set page number (for 'G' command only)
+O	set page number and go to current page
+z	zoom; prefix multiplied by 10 (i.e. '15z' = 150%)
+r	set rotation in degrees
+i	print some information
+I	invert colors
+q	quit
+^[/escape 	clear the numerical prefix
+mx	mark page as 'x' (or any other letter)
+\&'x	jump to the page marked as 'x'
+\&`x	jump to the page and position marked as 'x'
+j	scroll down
+k	scroll up
+h	scroll left
+l	scroll right
+[	align with the left edge of the page
+]	align with the right edge of the page
+{	align with the leftmost character on the page
+}	align with the rightmost character on the page
+H	show page top
+M	centre the page vertically
+L	show page bottom
+C	centre the page horizontally
+^D/space	page down
+^U/^H/backspace	page up
+^L	redraw
+e	reload current file
+f	zoom to fit page height
+w	zoom to fit page width
+W	zoom to fit page contents horizontally
+Z	set the default zoom level for 'z' command
+d	sleep one second before the next command
+.TE
+.SH "EXIT STATUS"
+.PP
+\fBfbpdf\fR returns 1 in case of error, 0 otherwise.
