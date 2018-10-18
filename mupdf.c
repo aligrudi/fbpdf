@@ -17,9 +17,10 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 	fz_pixmap *pix;
 	fbval_t *pbuf;
 	int x, y;
-	fz_scale(&ctm, (float) zoom / 10, (float) zoom / 10);
-	fz_pre_rotate(&ctm, rotate);
-	pix = fz_new_pixmap_from_page_number(doc->ctx, doc->pdf, p - 1, &ctm, fz_device_rgb(doc->ctx), 0);
+	ctm = fz_scale((float) zoom / 10, (float) zoom / 10);
+	ctm = fz_pre_rotate(ctm, rotate);
+	pix = fz_new_pixmap_from_page_number(doc->ctx, doc->pdf,
+			p - 1, ctm, fz_device_rgb(doc->ctx), 0);
 	if (!pix)
 		return NULL;
 	if (!(pbuf = malloc(pix->w * pix->h * sizeof(pbuf[0])))) {

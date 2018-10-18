@@ -11,11 +11,11 @@ clean:
 
 # pdf support using mupdf
 fbpdf: fbpdf.o mupdf.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lmupdfthird -lcrypto -lm
+	$(CC) -o $@ $^ $(LDFLAGS) -lmupdf -lmupdf-third -lmupdf-pkcs7 -lmupdf-threads -lm
 
 # djvu support
 fbdjvu: fbpdf.o djvulibre.o draw.o
-	$(CC) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lstdc++ -lpthread
+	$(CXX) -o $@ $^ $(LDFLAGS) -ldjvulibre -ljpeg -lm -lpthread
 
 # pdf support using poppler
 poppler.o: poppler.c
