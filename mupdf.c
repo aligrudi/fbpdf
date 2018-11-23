@@ -11,7 +11,7 @@ struct doc {
 	fz_document *pdf;
 };
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols, int invert)
 {
 	fz_matrix ctm;
 	fz_pixmap *pix;
@@ -27,6 +27,8 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 		fz_drop_pixmap(doc->ctx, pix);
 		return NULL;
 	}
+	if (invert)
+		fz_invert_pixmap(doc->ctx, pix);
 	for (y = 0; y < pix->h; y++) {
 		unsigned char *s = &pix->samples[y * pix->stride];
 		for (x = 0; x < pix->w; x++)
