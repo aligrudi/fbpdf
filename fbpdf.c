@@ -51,6 +51,7 @@ static int zoom = 15;
 static int zoom_def = 15;	/* default zoom */
 static int rotate;
 static int count;
+static int top = 0;
 
 static void draw(void)
 {
@@ -130,8 +131,8 @@ static int getcount(int def)
 static void printinfo(void)
 {
 	printf("\x1b[H");
-	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K\r",
-		filename, num, doc_pages(doc), zoom * 10);
+	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%%  top:%d \x1b[K\r",
+		filename, num, doc_pages(doc), zoom * 10, top);
 	fflush(stdout);
 }
 
@@ -208,7 +209,7 @@ static void mainloop(void)
 	term_setup();
 	signal(SIGCONT, sigcont);
 	loadpage(num);
-	srow = prow;
+	srow = prow + top;
 	scol = -scols / 2;
 	draw();
 	while ((c = readkey()) != -1) {
@@ -243,23 +244,23 @@ static void mainloop(void)
 		case CTRLKEY('f'):
 		case 'J':
 			if (!loadpage(num + getcount(1)))
-				srow = prow;
+				srow = prow + top;
 			break;
 		case CTRLKEY('b'):
 		case 'K':
 			if (!loadpage(num - getcount(1)))
-				srow = prow;
+				srow = prow + top;
 			break;
 		case 'G':
 			setmark('\'');
 			if (!loadpage(getcount(doc_pages(doc) - numdiff) + numdiff))
-				srow = prow;
+				srow = prow + top;
 			break;
 		case 'O':
 			numdiff = num - getcount(num);
 			setmark('\'');
 			if (!loadpage(num + numdiff))
-				srow = prow;
+				srow = prow + top;
 			break;
 		case 'z':
 			zoom_page(getcount(zoom_def));
@@ -278,7 +279,7 @@ static void mainloop(void)
 		case 'r':
 			rotate = getcount(0);
 			if (!loadpage(num))
-				srow = prow;
+				srow = prow + top;
 			break;
 		case '`':
 		case '\'':
@@ -297,7 +298,7 @@ static void mainloop(void)
 			scol -= hstep * getcount(1);
 			break;
 		case 'H':
-			srow = prow;
+			srow = prow + top;
 			break;
 		case 'L':
 			srow = prow + prows - srows;
@@ -336,6 +337,7 @@ static void mainloop(void)
 		srow = MAX(prow - srows + MARGIN, MIN(prow + prows - MARGIN, srow));
 		scol = MAX(pcol - scols + MARGIN, MIN(pcol + pcols - MARGIN, scol));
 		draw();
+		top = srow - prow;
 	}
 	term_cleanup();
 }
@@ -367,6 +369,9 @@ int main(int argc, char *argv[])
 		case 'p':
 			num = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
 			break;
+		case 't':
+			top = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
+			break;
 		}
 	}
 	printinfo();
@@ -380,6 +385,7 @@ int main(int argc, char *argv[])
 		mainloop();
 	fb_free();
 	free(pbuf);
+	printinfo();
 	if (doc)
 		doc_close(doc);
 	return 0;
