@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
 {
 	int i = 1;
 	if (argc < 2) {
-		printf(usage);
+		printf("%s", usage);
 		return 1;
 	}
 	strcpy(filename, argv[argc - 1]);
