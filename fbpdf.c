@@ -351,13 +351,13 @@ static void mainloop(void)
 }
 
 static char *usage =
-	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] filename\n";
+	"usage: fbpdf [-r rotation] [-z zoom x10] [-p page] filename";
 
 int main(int argc, char *argv[])
 {
 	int i = 1;
 	if (argc < 2) {
-		printf(usage);
+		puts(usage);
 		return 1;
 	}
 	strcpy(filename, argv[argc - 1]);
