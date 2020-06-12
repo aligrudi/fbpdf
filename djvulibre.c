@@ -42,7 +42,7 @@ static void djvu_render(ddjvu_page_t *page, int iw, int ih, void *bitmap)
 	ddjvu_format_release(fmt);
 }
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, float zoom, int rotate, int *rows, int *cols)
 {
 	ddjvu_page_t *page;
 	ddjvu_pageinfo_t info;

@@ -11,7 +11,7 @@ struct doc {
 	fz_document *pdf;
 };
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, float zoom, int rotate, int *rows, int *cols)
 {
 	fz_matrix ctm;
 	fz_pixmap *pix;

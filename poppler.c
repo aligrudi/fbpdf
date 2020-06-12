@@ -27,7 +27,7 @@ static poppler::rotation_enum rotation(int times)
 	return poppler::rotate_0;
 }
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, float zoom, int rotate, int *rows, int *cols)
 {
 	poppler::page *page = doc->doc->create_page(p - 1);
 	poppler::page_renderer pr;

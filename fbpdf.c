@@ -47,7 +47,7 @@ static int mark[128];		/* mark page number */
 static int mark_row[128];	/* mark head position */
 static int num = 1;		/* page number */
 static int numdiff;		/* G command page number difference */
-static int zoom = 15;
+static float zoom = 15;
 static int zoom_def = 15;	/* default zoom */
 static int rotate;
 static int count;
@@ -89,9 +89,9 @@ static int loadpage(int p)
 	return 0;
 }
 
-static void zoom_page(int z)
+static void zoom_page(float z)
 {
-	int _zoom = zoom;
+	float _zoom = zoom;
 	zoom = MIN(MAXZOOM, MAX(1, z));
 	if (!loadpage(num))
 		srow = srow * zoom / _zoom;
@@ -136,7 +136,7 @@ static int getcount(int def)
 static void printinfo(void)
 {
 	printf("\x1b[H");
-	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K\r",
+	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%f%% \x1b[K\r",
 		filename, num, doc_pages(doc), zoom * 10);
 	fflush(stdout);
 }
