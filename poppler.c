@@ -37,7 +37,8 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 	unsigned char *dat;
 	pr.set_render_hint(poppler::page_renderer::antialiasing, true);
 	pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
-	poppler::image img = pr.render_page(page, 72 * zoom / 10, 72 * zoom / 10,
+	poppler::image img = pr.render_page(page,
+				(float) 72 * zoom / 100, (float) 72 * zoom / 100,
 				-1, -1, -1, -1, rotation((rotate + 89) / 90));
 	h = img.height();
 	w = img.width();

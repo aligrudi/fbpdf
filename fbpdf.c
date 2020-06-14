@@ -29,7 +29,7 @@
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 
 #define PAGESTEPS	8
-#define MAXZOOM		100
+#define MAXZOOM		1000
 #define MARGIN		1
 #define CTRLKEY(x)	((x) - 96)
 #define ISMARK(x)	(isalpha(x) || (x) == '\'' || (x) == '`')
@@ -47,8 +47,8 @@ static int mark[128];		/* mark page number */
 static int mark_row[128];	/* mark head position */
 static int num = 1;		/* page number */
 static int numdiff;		/* G command page number difference */
-static int zoom = 15;
-static int zoom_def = 15;	/* default zoom */
+static int zoom = 150;
+static int zoom_def = 150;	/* default zoom */
 static int rotate;
 static int count;
 static int invert;		/* invert colors? */
@@ -137,7 +137,7 @@ static void printinfo(void)
 {
 	printf("\x1b[H");
 	printf("FBPDF:     file:%s  page:%d(%d)  zoom:%d%% \x1b[K\r",
-		filename, num, doc_pages(doc), zoom * 10);
+		filename, num, doc_pages(doc), zoom);
 	fflush(stdout);
 }
 
@@ -227,7 +227,7 @@ static void mainloop(void)
 			numdiff = num - getcount(num);
 			break;
 		case 'Z':
-			zoom_def = getcount(zoom);
+			zoom_def = getcount(zoom / 10) * 10;
 			break;
 		case 'i':
 			printinfo();
@@ -268,7 +268,7 @@ static void mainloop(void)
 				srow = prow;
 			break;
 		case 'z':
-			zoom_page(getcount(zoom_def));
+			zoom_page(getcount(zoom_def / 10) * 10);
 			break;
 		case 'w':
 			zoom_page(pcols ? zoom * scols / pcols : zoom);
@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
 			rotate = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
 			break;
 		case 'z':
-			zoom = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);
+			zoom = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]) * 10;
 			break;
 		case 'p':
 			num = atoi(argv[i][2] ? argv[i] + 2 : argv[++i]);

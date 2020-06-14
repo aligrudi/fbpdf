@@ -60,8 +60,8 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 		ddjvu_page_set_rotation(page, (4 - (rotate / 90 % 4)) & 3);
 	ddjvu_document_get_pageinfo(doc->doc, p - 1, &info);
 	dpi = ddjvu_page_get_resolution(page);
-	iw = ddjvu_page_get_width(page) * zoom * 10 / dpi;
-	ih = ddjvu_page_get_height(page) * zoom * 10 / dpi;
+	iw = ddjvu_page_get_width(page) * zoom / dpi;
+	ih = ddjvu_page_get_height(page) * zoom / dpi;
 	if (!(bmp = malloc(ih * iw * 3))) {
 		ddjvu_page_release(page);
 		return NULL;
