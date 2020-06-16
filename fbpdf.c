@@ -101,7 +101,7 @@ static void setmark(int c)
 {
 	if (ISMARK(c)) {
 		mark[c] = num;
-		mark_row[c] = srow / zoom;
+		mark_row[c] = srow * 100 / zoom;
 	}
 }
 
@@ -111,7 +111,7 @@ static void jmpmark(int c, int offset)
 		c = '\'';
 	if (ISMARK(c) && mark[c]) {
 		int dst = mark[c];
-		int dst_row = offset ? mark_row[c] * zoom : 0;
+		int dst_row = offset ? mark_row[c] * zoom / 100 : 0;
 		setmark('\'');
 		if (!loadpage(dst))
 			srow = offset ? dst_row : prow;
@@ -227,7 +227,8 @@ static void mainloop(void)
 			numdiff = num - getcount(num);
 			break;
 		case 'Z':
-			zoom_def = getcount(zoom / 10) * 10;
+			count *= 10;
+			zoom_def = getcount(zoom);
 			break;
 		case 'i':
 			printinfo();
@@ -268,7 +269,8 @@ static void mainloop(void)
 				srow = prow;
 			break;
 		case 'z':
-			zoom_page(getcount(zoom_def / 10) * 10);
+			count *= 10;
+			zoom_page(getcount(zoom_def));
 			break;
 		case 'w':
 			zoom_page(pcols ? zoom * scols / pcols : zoom);
