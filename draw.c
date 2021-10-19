@@ -2,23 +2,24 @@
 #include <linux/fb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <string.h>
 #include "draw.h"
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 #define NLEVELS		(1 << 8)
 
-static int fd;
-static void *fb;
-static struct fb_var_screeninfo vinfo;
-static struct fb_fix_screeninfo finfo;
-static int bpp;
-static int nr, ng, nb;
-static int rl, rr, gl, gr, bl, br;	/* fb_color() shifts */
+static struct fb_var_screeninfo vinfo;	/* linux-specific FB structure */
+static struct fb_fix_screeninfo finfo;	/* linux-specific FB structure */
+static int fd;				/* FB device file descriptor */
+static void *fb;			/* mmap()ed FB memory */
+static int bpp;				/* bytes per pixel */
+static int nr, ng, nb;			/* color levels */
+static int rl, rr, gl, gr, bl, br;	/* shifts per color */
+static int xres, yres, xoff, yoff;	/* drawing region */
 
 static int fb_len(void)
 {
@@ -67,7 +68,8 @@ void fb_cmap(void)
 
 unsigned fb_mode(void)
 {
-	return (bpp << 16) | (vinfo.red.length << 8) |
+	return ((rl < gl) << 22) | ((rl < bl) << 21) | ((gl < bl) << 20) |
+		(bpp << 16) | (vinfo.red.length << 8) |
 		(vinfo.green.length << 4) | (vinfo.blue.length);
 }
 
@@ -84,14 +86,20 @@ static void init_colors(void)
 	bl = vinfo.blue.offset;
 }
 
-int fb_init(void)
+int fb_init(char *dev)
 {
-	fd = open(FBDEV_PATH, O_RDWR);
-	if (fd == -1)
+	char *path = dev ? dev : FBDEV;
+	char *geom = dev ? strchr(dev, ':') : NULL;
+	if (geom) {
+		*geom = '\0';
+		sscanf(geom + 1, "%dx%d%d%d", &xres, &yres, &xoff, &yoff);
+	}
+	fd = open(path, O_RDWR);
+	if (fd < 0)
 		goto failed;
-	if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo) == -1)
+	if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo) < 0)
 		goto failed;
-	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
+	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) < 0)
 		goto failed;
 	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
 	bpp = (vinfo.bits_per_pixel + 7) >> 3;
@@ -117,22 +125,17 @@ void fb_free(void)
 
 int fb_rows(void)
 {
-	return vinfo.yres;
+	return yres ? yres : vinfo.yres;
 }
 
 int fb_cols(void)
 {
-	return vinfo.xres;
+	return xres ? xres : vinfo.xres;
 }
 
 void *fb_mem(int r)
 {
-	return fb + (r + vinfo.yoffset) * finfo.line_length;
-}
-
-void fb_set(int r, int c, void *mem, int len)
-{
-	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bpp, mem, len * bpp);
+	return fb + (r + vinfo.yoffset + yoff) * finfo.line_length + (vinfo.xoffset + xoff) * bpp;
 }
 
 unsigned fb_val(int r, int g, int b)

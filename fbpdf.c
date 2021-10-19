@@ -55,6 +55,7 @@ static int invert;		/* invert colors? */
 
 static void draw(void)
 {
+	int bpp = FBM_BPP(fb_mode());
 	int i;
 	fbval_t *rbuf = malloc(scols * sizeof(rbuf[0]));
 	for (i = srow; i < srow + srows; i++) {
@@ -66,7 +67,7 @@ static void draw(void)
 				pbuf + (i - prow) * pcols + cbeg - pcol,
 				(cend - cbeg) * sizeof(rbuf[0]));
 		}
-		fb_set(i - srow, 0, rbuf, scols);
+		memcpy(fb_mem(i - srow), rbuf, scols * bpp);
 	}
 	free(rbuf);
 }
@@ -382,7 +383,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	printinfo();
-	if (fb_init())
+	if (fb_init(getenv("FBDEV")))
 		return 1;
 	srows = fb_rows();
 	scols = fb_cols();
