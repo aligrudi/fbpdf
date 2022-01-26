@@ -67,6 +67,8 @@ int doc_pages(struct doc *doc)
 struct doc *doc_open(char *path)
 {
 	struct doc *doc = (struct doc *) malloc(sizeof(*doc));
+	if (doc == NULL)
+		return NULL;
 	doc->doc = poppler::document::load_from_file(path);
 	if (!doc->doc) {
 		doc_close(doc);
