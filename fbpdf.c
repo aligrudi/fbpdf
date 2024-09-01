@@ -185,8 +185,13 @@ static int rmargin(void)
 	int i, j;
 	for (i = 0; i < prows; i++) {
 		j = pcols - 1;
-		while (j > ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
-			j--;
+		if(invert){
+			while (j > ret && (pbuf[i * pcols + j] ^ 0xffffffff) == FB_VAL(255, 255, 255))
+				j--;
+		}else{
+			while (j > ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
+				j--;
+		}
 		if (ret < j)
 			ret = j;
 	}
@@ -199,8 +204,13 @@ static int lmargin(void)
 	int i, j;
 	for (i = 0; i < prows; i++) {
 		j = 0;
-		while (j < ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
-			j++;
+		if(invert){
+			while (j < ret && (pbuf[i * pcols + j] ^ 0xffffffff) == FB_VAL(255, 255, 255))
+				j++;
+		}else{
+			while (j < ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
+				j++;
+		}
 		if (ret > j)
 			ret = j;
 	}
@@ -358,6 +368,7 @@ static char *usage =
 
 int main(int argc, char *argv[])
 {
+	invert = 1;
 	int i = 1;
 	if (argc < 2) {
 		puts(usage);
