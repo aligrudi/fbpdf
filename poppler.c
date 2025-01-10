@@ -8,7 +8,6 @@
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 extern "C" {
-#include "draw.h"
 #include "doc.h"
 }
 
@@ -27,13 +26,13 @@ static poppler::rotation_enum rotation(int times)
 	return poppler::rotate_0;
 }
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int bpp, int *rows, int *cols)
 {
 	poppler::page *page = doc->doc->create_page(p - 1);
 	poppler::page_renderer pr;
 	int x, y;
 	int h, w;
-	fbval_t *pbuf;
+	char *pbuf;
 	unsigned char *dat;
 	pr.set_render_hint(poppler::page_renderer::antialiasing, true);
 	pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
@@ -43,15 +42,15 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 	h = img.height();
 	w = img.width();
 	dat = (unsigned char *) img.data();
-	if (!(pbuf = (fbval_t *) malloc(h * w * sizeof(pbuf[0])))) {
+	if (!(pbuf = (char *) malloc(h * w * bpp))) {
 		delete page;
 		return NULL;
 	}
 	for (y = 0; y < h; y++) {
 		unsigned char *s = dat + img.bytes_per_row() * y;
+		char *d = pbuf + (y * w) * bpp;
 		for (x = 0; x < w; x++)
-			pbuf[y * w + x] = FB_VAL(s[x * 4 + 2],
-					s[x * 4 + 1], s[x * 4 + 0]);
+			fb_set(d + x * bpp, s[x * 4 + 2], s[x * 4 + 1], s[x * 4]);
 	}
 	*rows = h;
 	*cols = w;

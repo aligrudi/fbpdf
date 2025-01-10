@@ -35,11 +35,12 @@
 #define ISMARK(x)	(isalpha(x) || (x) == '\'' || (x) == '`')
 
 static struct doc *doc;
-static fbval_t *pbuf;		/* current page */
+static char *pbuf;		/* current page */
 static int srows, scols;	/* screen dimentions */
 static int prows, pcols;	/* current page dimensions */
 static int prow, pcol;		/* page position */
 static int srow, scol;		/* screen position */
+static int bpp;			/* bytes per pixel */
 
 static struct termios termios;
 static char filename[256];
@@ -55,17 +56,16 @@ static int invert;		/* invert colors? */
 
 static void draw(void)
 {
-	int bpp = FBM_BPP(fb_mode());
 	int i;
-	fbval_t *rbuf = malloc(scols * sizeof(rbuf[0]));
+	char *rbuf = malloc(scols * bpp);
 	for (i = srow; i < srow + srows; i++) {
 		int cbeg = MAX(scol, pcol);
 		int cend = MIN(scol + scols, pcol + pcols);
-		memset(rbuf, 0, scols * sizeof(rbuf[0]));
+		memset(rbuf, 0, scols * bpp);
 		if (i >= prow && i < prow + prows && cbeg < cend) {
-			memcpy(rbuf + cbeg - scol,
-				pbuf + (i - prow) * pcols + cbeg - pcol,
-				(cend - cbeg) * sizeof(rbuf[0]));
+			memcpy(rbuf + (cbeg - scol) * bpp,
+				pbuf + ((i - prow) * pcols + cbeg - pcol) * bpp,
+				(cend - cbeg) * bpp);
 		}
 		memcpy(fb_mem(i - srow), rbuf, scols * bpp);
 	}
@@ -79,10 +79,10 @@ static int loadpage(int p)
 		return 1;
 	prows = 0;
 	free(pbuf);
-	pbuf = doc_draw(doc, p, zoom, rotate, &prows, &pcols);
+	pbuf = doc_draw(doc, p, zoom, rotate, bpp, &prows, &pcols);
 	if (invert) {
-		for (i = 0; i < prows * pcols; i++)
-			pbuf[i] = pbuf[i] ^ 0xffffffff;
+		for (i = 0; i < prows * pcols * bpp; i++)
+			pbuf[i] = (unsigned char) pbuf[i] ^ 0xff;
 	}
 	prow = -prows / 2;
 	pcol = -pcols / 2;
@@ -179,13 +179,31 @@ static int reload(void)
 	return 0;
 }
 
+/* this can be optimised based on framebuffer pixel format */
+void fb_set(char *d, unsigned r, unsigned g, unsigned b)
+{
+	unsigned c = fb_val(r, g, b);
+	int i;
+	for (i = 0; i < bpp; i++)
+		d[i] = (c >> (i << 3)) & 0xff;
+}
+
+static int iswhite(char *pix)
+{
+	int i;
+	for (i = 0; i < 3 && i < bpp; i++)
+		if (((unsigned char) pix[i]) != 255)
+			return 0;
+	return 1;
+}
+
 static int rmargin(void)
 {
 	int ret = 0;
 	int i, j;
 	for (i = 0; i < prows; i++) {
 		j = pcols - 1;
-		while (j > ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
+		while (j > ret && iswhite(pbuf + (i * pcols + j) * bpp))
 			j--;
 		if (ret < j)
 			ret = j;
@@ -199,7 +217,7 @@ static int lmargin(void)
 	int i, j;
 	for (i = 0; i < prows; i++) {
 		j = 0;
-		while (j < ret && pbuf[i * pcols + j] == FB_VAL(255, 255, 255))
+		while (j < ret && iswhite(pbuf + (i * pcols + j) * bpp))
 			j++;
 		if (ret > j)
 			ret = j;
@@ -387,10 +405,8 @@ int main(int argc, char *argv[])
 		return 1;
 	srows = fb_rows();
 	scols = fb_cols();
-	if (FBM_BPP(fb_mode()) != sizeof(fbval_t))
-		fprintf(stderr, "fbpdf: fbval_t doesn't match fb depth\n");
-	else
-		mainloop();
+	bpp = FBM_BPP(fb_mode());
+	mainloop();
 	fb_free();
 	free(pbuf);
 	if (doc)

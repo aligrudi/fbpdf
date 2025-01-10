@@ -2,7 +2,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <libdjvu/ddjvuapi.h>
-#include "draw.h"
 #include "doc.h"
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
@@ -42,13 +41,13 @@ static void djvu_render(ddjvu_page_t *page, int iw, int ih, void *bitmap)
 	ddjvu_format_release(fmt);
 }
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int bpp, int *rows, int *cols)
 {
 	ddjvu_page_t *page;
 	ddjvu_pageinfo_t info;
 	int iw, ih, dpi;
 	unsigned char *bmp;
-	fbval_t *pbuf;
+	char *pbuf;
 	int i, j;
 	page = ddjvu_page_create_by_pageno(doc->doc, p - 1);
 	if (!page)
@@ -68,15 +67,15 @@ void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *col
 	}
 	djvu_render(page, iw, ih, bmp);
 	ddjvu_page_release(page);
-	if (!(pbuf = malloc(ih * iw * sizeof(pbuf[0])))) {
+	if (!(pbuf = malloc(ih * iw * bpp))) {
 		free(bmp);
 		return NULL;
 	}
 	for (i = 0; i < ih; i++) {
-		unsigned char *src = bmp + i * iw * 3;
-		fbval_t *dst = pbuf + i * iw;
+		unsigned char *s = bmp + i * iw * 3;
+		char *d = pbuf + (i * iw) * bpp;
 		for (j = 0; j < iw; j++)
-			dst[j] = FB_VAL(src[j * 3], src[j * 3 + 1], src[j * 3 + 2]);
+			fb_set(d + j * bpp, s[j * 3], s[j * 3 + 1], s[j * 3 + 2]);
 	}
 	free(bmp);
 	*cols = iw;

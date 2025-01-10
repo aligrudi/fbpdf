@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mupdf/fitz.h"
-#include "draw.h"
 #include "doc.h"
 
 #define MIN_(a, b)	((a) < (b) ? (a) : (b))
@@ -11,27 +10,27 @@ struct doc {
 	fz_document *pdf;
 };
 
-void *doc_draw(struct doc *doc, int p, int zoom, int rotate, int *rows, int *cols)
+void *doc_draw(struct doc *doc, int page, int zoom, int rotate, int bpp, int *rows, int *cols)
 {
 	fz_matrix ctm;
 	fz_pixmap *pix;
-	fbval_t *pbuf;
+	char *pbuf;
 	int x, y;
 	ctm = fz_scale((float) zoom / 100, (float) zoom / 100);
 	ctm = fz_pre_rotate(ctm, rotate);
 	pix = fz_new_pixmap_from_page_number(doc->ctx, doc->pdf,
-			p - 1, ctm, fz_device_rgb(doc->ctx), 0);
+			page - 1, ctm, fz_device_rgb(doc->ctx), 0);
 	if (!pix)
 		return NULL;
-	if (!(pbuf = malloc(pix->w * pix->h * sizeof(pbuf[0])))) {
+	if (!(pbuf = malloc(pix->w * pix->h * bpp))) {
 		fz_drop_pixmap(doc->ctx, pix);
 		return NULL;
 	}
 	for (y = 0; y < pix->h; y++) {
 		unsigned char *s = &pix->samples[y * pix->stride];
+		char *d = pbuf + (y * pix->w) * bpp;
 		for (x = 0; x < pix->w; x++)
-			pbuf[y * pix->w + x] = FB_VAL(s[x * pix->n + 0],
-					s[x * pix->n + 1], s[x * pix->n + 2]);
+			fb_set(d + x * bpp, s[x * pix->n], s[x * pix->n + 1], s[x * pix->n + 2]);
 	}
 	fz_drop_pixmap(doc->ctx, pix);
 	*cols = pix->w;
