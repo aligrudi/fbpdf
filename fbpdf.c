@@ -190,9 +190,10 @@ void fb_set(char *d, unsigned r, unsigned g, unsigned b)
 
 static int iswhite(char *pix)
 {
+	int val = invert ? 0 : 255;
 	int i;
 	for (i = 0; i < 3 && i < bpp; i++)
-		if (((unsigned char) pix[i]) != 255)
+		if (((unsigned char) pix[i]) != val)
 			return 0;
 	return 1;
 }
