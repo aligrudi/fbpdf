@@ -1,11 +1,17 @@
 FBPDF
 =====
 
-Fbpdf is a framebuffer pdf and djvu viewer.  There are three make
-targets: fbpdf uses mupdf library for rendering pdf, fbpdf2 uses
-poppler for the same purpose, and fbdjvu uses djvulibre library for
-rendering djvu files.  The following options are available in all
-three programs:
+Fbpdf is a framebuffer PDF and DjVu viewer.  There are three make
+targets:
+
+* fbpdf: uses mupdf library for rendering PDF, CBZ, and EPUB files.
+* fbpdf2: uses poppler library for rendering PDF files.
+* fbdjvu: uses djvulibre library for rendering DjVu files.
+
+The default target is fbpdf; to build the other two, they must be
+explicitly specified.
+
+The following options are available in all three programs:
 
   fbpdf [-r rotation] [-z zoom_x10] [-p page_number] file.pdf
 
