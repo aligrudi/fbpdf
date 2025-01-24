@@ -81,8 +81,10 @@ static int loadpage(int p)
 	free(pbuf);
 	pbuf = doc_draw(doc, p, zoom, rotate, bpp, &prows, &pcols);
 	if (invert) {
-		for (i = 0; i < prows * pcols * bpp; i++)
-			pbuf[i] = (unsigned char) pbuf[i] ^ 0xff;
+		for (i = 0; i < prows * pcols * bpp; i++) {
+			int val = (unsigned char) pbuf[i] ^ 0xff;
+			pbuf[i] = val * invert / 255 + (255 - invert);
+		}
 	}
 	prow = -prows / 2;
 	pcol = -pcols / 2;
@@ -190,7 +192,7 @@ void fb_set(char *d, unsigned r, unsigned g, unsigned b)
 
 static int iswhite(char *pix)
 {
-	int val = invert ? 0 : 255;
+	int val = 255 - invert;
 	int i;
 	for (i = 0; i < 3 && i < bpp; i++)
 		if (((unsigned char) pix[i]) != val)
@@ -359,7 +361,7 @@ static void mainloop(void)
 		case CTRLKEY('l'):
 			break;
 		case 'I':
-			invert = !invert;
+			invert = count || !invert ? 255 - (getcount(48) & 0xff) : 0;
 			loadpage(num);
 			break;
 		default:	/* no need to redraw */
